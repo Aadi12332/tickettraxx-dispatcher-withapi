@@ -7,13 +7,48 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthButton from "../../components/common/AuthButton";
+import { loginApi } from "../../services/auth.service";
+import { STORAGE_KEYS } from "../../constants/api.constants";
+import axios from "axios";
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
-  const handleLogin = () => {
-    navigate("/dashboard");
+
+  const handleLogin = async () => {
+    setError("");
+
+    if (!email || !password) {
+      setError("Please enter email and password");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await loginApi({ identifier: email, password });
+
+      // Tokens aur user localStorage me save karo
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
+      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
+
+      navigate("/dashboard");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.message || "Invalid credentials. Please try again."
+        );
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
     <AuthLayout>
       <div className="flex justify-center">
@@ -43,6 +78,10 @@ const Login = () => {
           placeholder="••••••••••••••••"
         />
 
+        {error && (
+          <p className="text-red-500 text-sm font-light">{error}</p>
+        )}
+
         <div className="flex items-center justify-between mt-4">
           <label className="flex items-center gap-2 cursor-pointer group">
             <div className="relative flex items-center justify-center w-5 h-5">
@@ -68,8 +107,8 @@ const Login = () => {
           </Link>
         </div>
 
-        <AuthButton onClick={handleLogin} className="mt-6">
-          Login
+        <AuthButton onClick={handleLogin} className="mt-6" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
         </AuthButton>
       </div>
     </AuthLayout>

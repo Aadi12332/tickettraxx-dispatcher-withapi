@@ -5,10 +5,38 @@ import AuthLayout from "../../layouts/AuthLayout";
 import CommonInput from "../../components/common/CommonInput";
 import { useNavigate } from "react-router-dom";
 import AuthButton from "../../components/common/AuthButton";
+import { forgotPasswordApi } from "../../services/auth.service";
+import axios from "axios";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  const handleSendOtp = async () => {
+    setError("");
+
+    if (!email) {
+      setError("Please enter your registered email or phone");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await forgotPasswordApi({ identifier: email });
+      // identifier ko OTP screen tak state ke through bhejna hai
+      navigate("/otp", { state: { identifier: email } });
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Unable to send OTP. Please try again.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AuthLayout>
@@ -37,8 +65,11 @@ const ForgotPassword = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <AuthButton onClick={() => navigate("/otp")} className="mt-6">
-          Send OTP
+
+        {error && <p className="text-red-500 text-sm font-light">{error}</p>}
+
+        <AuthButton onClick={handleSendOtp} className="mt-6" disabled={loading}>
+          {loading ? "Sending..." : "Send OTP"}
         </AuthButton>
       </div>
     </AuthLayout>

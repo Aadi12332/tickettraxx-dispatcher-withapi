@@ -1,17 +1,65 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import OtpInput from "react-otp-input";
 
 import AuthLayout from "../../layouts/AuthLayout";
 import AuthButton from "../../components/common/AuthButton";
+import { verifyOtpApi, forgotPasswordApi } from "../../services/auth.service";
+import axios from "axios";
+
+interface LocationState {
+  identifier?: string;
+}
 
 const OtpVerification = () => {
   const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
-  const handleVerify = () => {
-    console.log("OTP:", otp);
-    navigate("/reset-password");
+  const location = useLocation();
+  const { identifier } = (location.state as LocationState) || {};
+
+  // Agar koi seedha /otp pe aa gaya bina identifier ke, use wapas bhejo
+  useEffect(() => {
+    if (!identifier) {
+      navigate("/forgot-password", { replace: true });
+    }
+  }, [identifier, navigate]);
+
+  const handleVerify = async () => {
+    setError("");
+
+    if (!identifier) return;
+    if (otp.length < 5) {
+      setError("Please enter the complete OTP");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await verifyOtpApi({ identifier, code: otp, purpose: "reset" });
+      // Verified code ko ResetPassword screen tak bhejna hai, final /auth/reset call yahi code use karega
+      navigate("/reset-password", { state: { identifier, code: otp } });
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Invalid OTP. Please try again.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!identifier) return;
+    setError("");
+    try {
+      await forgotPasswordApi({ identifier });
+    } catch {
+      setError("Unable to resend OTP right now.");
+    }
   };
 
   return (
@@ -29,7 +77,7 @@ const OtpVerification = () => {
       </h2>
 
       <p className="text-(--color-text-gray) text-sm font-light mb-8 leading-relaxed">
-        We have share a code of your registered email address tomhenry@abc.com
+        We have share a code of your registered email address {identifier}
       </p>
 
       <div className="my-5.5">
@@ -60,8 +108,19 @@ const OtpVerification = () => {
           )}
         />
       </div>
-      <AuthButton onClick={handleVerify} className="mt-6">
-        Verify
+
+      {error && <p className="text-red-500 text-sm font-light mb-4">{error}</p>}
+
+      <button
+        type="button"
+        onClick={handleResend}
+        className="text-sm text-white font-light hover:underline mb-4 block"
+      >
+        Resend OTP
+      </button>
+
+      <AuthButton onClick={handleVerify} className="mt-6" disabled={loading}>
+        {loading ? "Verifying..." : "Verify"}
       </AuthButton>
     </AuthLayout>
   );

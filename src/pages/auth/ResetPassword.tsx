@@ -1,14 +1,55 @@
 import { ChevronLeft } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../../layouts/AuthLayout";
-import CommonInput from "../../components/common/CommonInput";
-import { useNavigate } from "react-router-dom";
+import PasswordInput from "../../components/common/PasswordInput";
 import AuthButton from "../../components/common/AuthButton";
+import { resetPasswordApi } from "../../services/auth.service";
+import axios from "axios";
+
+interface LocationState {
+  identifier?: string;
+  code?: string;
+}
 
 const ResetPassword = () => {
-  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const { identifier, code } = (location.state as LocationState) || {};
+
+  // Identifier/code na ho to seedha reset flow bypass nahi hone dena
+  useEffect(() => {
+    if (!identifier || !code) {
+      navigate("/forgot-password", { replace: true });
+    }
+  }, [identifier, code, navigate]);
+
+  const handleSave = async () => {
+    setError("");
+
+    if (!identifier || !code) return;
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await resetPasswordApi({ identifier, code, newPassword: password });
+      navigate("/auth-success");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Unable to reset password. Please try again.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AuthLayout>
@@ -30,15 +71,16 @@ const ResetPassword = () => {
       </p>
 
       <div className="space-y-4">
-        <CommonInput
-          label="Enter New Password"
+        <PasswordInput
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
         />
 
-        <AuthButton onClick={() => navigate("/auth-success")} className="mt-6">
-          Save
+        {error && <p className="text-red-500 text-sm font-light">{error}</p>}
+
+        <AuthButton onClick={handleSave} className="mt-6" disabled={loading}>
+          {loading ? "Saving..." : "Save"}
         </AuthButton>
       </div>
     </AuthLayout>
