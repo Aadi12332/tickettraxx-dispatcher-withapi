@@ -1,4 +1,4 @@
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://65.1.152.16";
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://65.1.152.16/api";
 
 export const AUTH_ENDPOINTS = {
   LOGIN: "/auth/login",

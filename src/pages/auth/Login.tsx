@@ -39,7 +39,7 @@ const Login = () => {
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(
-          err.response?.data?.message || "Invalid credentials. Please try again."
+          err.response?.data?.message || "Something went wrong. Please try again."
         );
       } else {
         setError("Something went wrong. Please try again.");
