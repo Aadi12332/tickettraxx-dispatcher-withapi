@@ -1,4 +1,10 @@
 import { Plus } from "lucide-react";
+import { useEffect } from "react";
+import axios from "axios";
+import {
+  getDispatchesApi,
+  exportDispatchApi,
+} from "../../services/auth.service";
 import PageHeader from "../../components/common/PageHeader";
 import DispatchTable from "../../components/dispatch/DispatchTable";
 import EditDispatchModal from "../../components/assign_loads/modal/EditDispatchModal";
@@ -10,56 +16,51 @@ import CommonButton from "../../components/common/CommonButton";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import CreatePickupModal from "../../components/pickup/modal/CreatePickupModal";
-
-interface DispatchItem {
-  date: string;
-  total: string;
-  status: "Active" | "Closed";
-}
-const dispatchData: DispatchItem[] = [
-  {
-    date: "2026-07-01",
-    total: "$2210.00",
-    status: "Active",
-  },
-  {
-    date: "2026-06-25",
-    total: "$220.00",
-    status: "Closed",
-  },
-  {
-    date: "2026-06-21",
-    total: "$10.00",
-    status: "Active",
-  },
-  {
-    date: "2026-06-19",
-    total: "$220.00",
-    status: "Active",
-  },
-  {
-    date: "2026-06-10",
-    total: "$320.00",
-    status: "Active",
-  },
-  {
-    date: "2026-06-11",
-    total: "$120.00",
-    status: "Closed",
-  },
-  {
-    date: "2026-06-02",
-    total: "$550.00",
-    status: "Active",
-  },
-];
+import type { DispatchItem } from "../../types/auth.types";
+// const dispatchData: DispatchItem[] = [
+//   {
+//     date: "2026-07-01",
+//     total: "$2210.00",
+//     status: "Active",
+//   },
+//   {
+//     date: "2026-06-25",
+//     total: "$220.00",
+//     status: "Closed",
+//   },
+//   {
+//     date: "2026-06-21",
+//     total: "$10.00",
+//     status: "Active",
+//   },
+//   {
+//     date: "2026-06-19",
+//     total: "$220.00",
+//     status: "Active",
+//   },
+//   {
+//     date: "2026-06-10",
+//     total: "$320.00",
+//     status: "Active",
+//   },
+//   {
+//     date: "2026-06-11",
+//     total: "$120.00",
+//     status: "Closed",
+//   },
+//   {
+//     date: "2026-06-02",
+//     total: "$550.00",
+//     status: "Active",
+//   },
+// ];
 
 const Dispatch = () => {
   const [dispatchModal, setDispatchModal] = useState<
-  "none" | "create" | "edit"
->("none");
+    "none" | "create" | "edit"
+  >("none");
 
-const [openPickupModal, setOpenPickupModal] = useState(false);
+  const [openPickupModal, setOpenPickupModal] = useState(false);
   // const [showEditModal, setShowEditModal] = useState(false);
   const [showDispatchDetails, setShowDispatchDetails] = useState(false);
   const [search, setSearch] = useState("");
@@ -71,17 +72,25 @@ const [openPickupModal, setOpenPickupModal] = useState(false);
   const [entries, setEntries] = useState(10);
   const [period, setPeriod] = useState("All");
   const [statusFilter, setStatusFilter] = useState("");
+  const [dispatchData, setDispatchData] = useState<DispatchItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<
     [Dayjs | null, Dayjs | null]
   >([null, null]);
 
-  const handleOpenPickupModal = () => {
-  setOpenPickupModal(true);
-};
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1,
+  });
 
-const handleClosePickupModal = () => {
-  setOpenPickupModal(false);
-};
+  const handleOpenPickupModal = () => {
+    setOpenPickupModal(true);
+  };
+
+  const handleClosePickupModal = () => {
+    setOpenPickupModal(false);
+  };
 
   const handleOnView = (item: DispatchItem) => {
     setIsCanceled(item.status !== "Active");
@@ -89,7 +98,17 @@ const handleClosePickupModal = () => {
   };
 
   const filteredData = dispatchData
-    .filter((item) => item.date.toLowerCase().includes(search.toLowerCase()))
+    .filter((item) => {
+      const searchValue = search.trim().toLowerCase();
+
+      if (!searchValue) return true;
+
+      return (
+        item.date.toLowerCase().includes(searchValue) ||
+        item.total.toLowerCase().includes(searchValue) ||
+        item.status.toLowerCase().includes(searchValue)
+      );
+    })
     .filter((item) => {
       if (!statusFilter) return true;
       if (statusFilter === "active") return item.status === "Active";
@@ -134,6 +153,7 @@ const handleClosePickupModal = () => {
       return true;
     })
     .slice(0, entries);
+
   const formatDateRange = () => {
     const [start, end] = selectedDate;
 
@@ -149,6 +169,61 @@ const handleClosePickupModal = () => {
 
     return "";
   };
+
+  const loadDispatches = async (page = 1) => {
+    try {
+      const res = await getDispatchesApi(page);
+
+      const formattedData: DispatchItem[] = res.data.map((item: any) => ({
+        _id: item._id,
+        date: dayjs(item.date).format("YYYY-MM-DD"),
+        total: `$${Number(item.grandTotal).toFixed(2)}`,
+        status: item.status,
+        notes: item.notes,
+      }));
+
+      setDispatchData(formattedData);
+
+      setPagination(res.pagination);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        console.log("Dispatch API Error:", err.response?.data || err.message);
+      } else {
+        console.log("Dispatch API Error:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadDispatches();
+    loadDispatches(pagination.page);
+  }, []);
+
+  const handleDownloadDispatch = async (item: DispatchItem) => {
+  try {
+    const res = await exportDispatchApi(item._id);
+
+    const blob = new Blob(
+      [JSON.stringify(res, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dispatch-${item._id}.json`;
+
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Download failed", err);
+  }
+};
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -160,9 +235,9 @@ const handleClosePickupModal = () => {
             variant="primary"
             size="md"
             onClick={() => {
-  setShowDispatchDetails(false);
-  setDispatchModal("create");
-}}
+              setShowDispatchDetails(false);
+              setDispatchModal("create");
+            }}
           >
             <Plus size={18} />
             Create Dispatch
@@ -186,14 +261,21 @@ const handleClosePickupModal = () => {
 
         <DispatchTable
           data={filteredData}
+          currentPage={pagination.page}
+          totalPages={pagination.pages}
+          totalItems={pagination.total}
+          pageSize={pagination.limit}
+          onDownload={handleDownloadDispatch}
+          onPageChange={(page) => {
+            loadDispatches(page);
+          }}
           onView={(item) => handleOnView(item)}
-          // Edit
           onEdit={() => {
-  setDispatchModal("edit");
-}}
+            setDispatchModal("edit");
+          }}
           onCopy={() => {}}
-          onDownload={() => {}}
         />
+
         <div className="lg:hidden divide-y divide-(--border-gray-2)">
           {/* {dispatchData.map((item: any, index: number) => (
             <DispatchMobileCard
@@ -209,23 +291,24 @@ const handleClosePickupModal = () => {
           ))} */}
         </div>
       </div>
- <EditDispatchModal
-  open={dispatchModal === "edit"}
-  onClose={() => setDispatchModal("none")}
-  isEdit
-  onOpenPickupModal={handleOpenPickupModal}
-/>
 
-    <EditDispatchModal
-  open={dispatchModal === "create"}
-  onClose={() => setDispatchModal("none")}
-  title="Create Dispatch"
-  onOpenPickupModal={handleOpenPickupModal}
-/>
+      <EditDispatchModal
+        open={dispatchModal === "edit"}
+        onClose={() => setDispatchModal("none")}
+        isEdit
+        onOpenPickupModal={handleOpenPickupModal}
+      />
+
+      <EditDispatchModal
+        open={dispatchModal === "create"}
+        onClose={() => setDispatchModal("none")}
+        title="Create Dispatch"
+        onOpenPickupModal={handleOpenPickupModal}
+      />
       <CreatePickupModal
-  open={openPickupModal}
-  onClose={handleClosePickupModal}
-/>
+        open={openPickupModal}
+        onClose={handleClosePickupModal}
+      />
       <CalendarModal
         isOpen={openCalendarModal}
         onClose={() => setOpenCalendarModal(false)}

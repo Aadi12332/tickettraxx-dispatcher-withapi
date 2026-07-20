@@ -30,9 +30,9 @@ const TableFilters = ({
   return (
     <div className="p-3 lg:p-4 border-b border-(--border-gray-2) bg-white">
       <div className="flex flex-wrap lg:gap-4 gap-2 lg:items-center justify-between">
-        {/* Left Section */}
-        <div className={`flex flex-wrap lg:gap-4 gap-2 ${entries !== undefined ? "w-[unset]" : "w-full"}`}>
-          {/* Period */}
+        <div
+          className={`flex flex-wrap lg:gap-4 gap-2 ${entries !== undefined ? "w-[unset]" : "w-full"}`}
+        >
           {period && (
             <CommonFilterDropdown
               value={period}
@@ -48,7 +48,7 @@ const TableFilters = ({
           )}
 
           {/* Search */}
-          <div className="relative md:w-[200px] w-[130px] lg:w-[330px]">
+          <div className="relative md:w-[200px] w-[130px] xl:w-[330px]">
             <Search
               size={18}
               className="absolute left-3 top-2.5 text-text-gray"
@@ -75,25 +75,24 @@ const TableFilters = ({
             </button>
           )}
 
-                  {isSettingFilter && (
-         <div className="sm:ml-auto">
-           <CommonFilterDropdown
-            value={statusFilter}
-            onChange={(value) => onStatusFilterChange?.(value)}
-            icon={<SlidersHorizontal size={18} />}
-            options={[
-              { label: "Default", value: "" },
-              { label: "Active", value: "active" },
-              { label: "Close", value: "close" },
-              { label: "We Call", value: "we_call" },
-            ]}
-            size="auto"
-          />
-         </div>
-        )}
+          {isSettingFilter && (
+            <div className="sm:ml-auto">
+              <CommonFilterDropdown
+                value={statusFilter}
+                onChange={(value) => onStatusFilterChange?.(value)}
+                icon={<SlidersHorizontal size={18} />}
+                options={[
+                  { label: "Default", value: "" },
+                  { label: "Active", value: "active" },
+                  { label: "Close", value: "close" },
+                  { label: "We Call", value: "we_call" },
+                ]}
+                size="auto"
+              />
+            </div>
+          )}
         </div>
 
-        {/* Right Section */}
         {entries !== undefined && (
           <div className="flex items-center gap-3">
             <span>Show</span>
@@ -103,8 +102,8 @@ const TableFilters = ({
               onChange={(e) => onEntriesChange?.(Number(e.target.value))}
               className="h-[38px] px-4 border border-(--border-gray-2) rounded-[8px] outline-none"
             >
-              <option value={10}>10</option>
               <option value={3}>3</option>
+              <option value={10}>10</option>
               <option value={25}>25</option>
               <option value={50}>50</option>
             </select>

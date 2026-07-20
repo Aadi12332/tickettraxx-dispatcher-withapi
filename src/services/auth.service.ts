@@ -1,5 +1,5 @@
 import axiosInstance from "./axiosInstance";
-import { AUTH_ENDPOINTS } from "../constants/api.constants";
+import { AUTH_ENDPOINTS, DISPATCH_ENDPOINTS, NOTIFICATION_ENDPOINTS } from "../constants/api.constants";
 import type {
   LoginPayload,
   LoginResponse,
@@ -9,6 +9,8 @@ import type {
   VerifyOtpResponse,
   ResetPasswordPayload,
   ResetPasswordResponse,
+  NotificationResponse,
+  AlertResponse,
 } from "../types/auth.types";
 
 export const loginApi = async (payload: LoginPayload): Promise<LoginResponse> => {
@@ -49,7 +51,52 @@ export const resetPasswordApi = async (
   return data;
 };
 
-export const logoutApi = async () => {
-  const { data } = await axiosInstance.post(AUTH_ENDPOINTS.LOGOUT);
+export const getNotificationsApi = async (): Promise<NotificationResponse> => {
+  const { data } = await axiosInstance.get<NotificationResponse>(
+    NOTIFICATION_ENDPOINTS.NOTIFICATIONS
+  );
+
+  return data;
+};
+
+export const getAlertsApi = async (): Promise<AlertResponse> => {
+  const { data } = await axiosInstance.get<AlertResponse>(
+    NOTIFICATION_ENDPOINTS.ALERTS
+  );
+
+  return data;
+};
+
+export const markNotificationReadApi = async (
+  notificationId: string
+) => {
+  const { data } = await axiosInstance.patch(
+    NOTIFICATION_ENDPOINTS.MARK_READ(notificationId)
+  );
+
+  return data;
+};
+
+export const markAllNotificationsReadApi = async () => {
+  const { data } = await axiosInstance.post(
+    NOTIFICATION_ENDPOINTS.MARK_ALL_READ
+  );
+
+  return data;
+};
+
+export const getDispatchesApi = async (page = 1, limit = 10) => {
+  const { data } = await axiosInstance.get(
+    `${DISPATCH_ENDPOINTS.GET_DISPATCHES}?page=${page}&limit=${limit}`
+  );
+
+  return data;
+};
+
+export const exportDispatchApi = async (id: string) => {
+  const { data } = await axiosInstance.get(
+    DISPATCH_ENDPOINTS.EXPORT_DISPATCH(id)
+  );
+
   return data;
 };

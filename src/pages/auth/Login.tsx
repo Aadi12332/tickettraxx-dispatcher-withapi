@@ -3,7 +3,7 @@ import AuthLayout from "../../layouts/AuthLayout";
 import Logo from "../../assets/images/Logo.svg";
 import CommonInput from "../../components/common/CommonInput";
 import PasswordInput from "../../components/common/PasswordInput";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthButton from "../../components/common/AuthButton";
@@ -17,6 +17,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+  localStorage.clear();
+}, []);
 
   const handleLogin = async () => {
     setError("");

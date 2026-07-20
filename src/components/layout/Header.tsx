@@ -1,8 +1,8 @@
 import { Search, Menu, LogOut } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Bell from "../../assets/icons/NotificationBell.svg";
-import { useNavigate } from "react-router-dom";
 import NotificationDrawer from "./NotificationDrawer";
+import { useAuth, getInitials } from "../../hooks/useAuth";
 
 interface HeaderProps {
   setIsMobileOpen?: (open: boolean) => void;
@@ -11,8 +11,8 @@ interface HeaderProps {
 const Header = ({ setIsMobileOpen }: HeaderProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -26,6 +26,18 @@ const Header = ({ setIsMobileOpen }: HeaderProps) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const displayName = user?.name || "Guest";
+  const displayRole = user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+    : "";
+  const initials = getInitials(user?.name);
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDropdownOpen(false);
+    void logout();
+  };
 
   return (
     <div className="bg-white border border-(--border-gray-2) rounded-[40px] lg:rounded-full min-h-[60px] lg:h-[60px] px-4 lg:px-6 py-2 flex items-center justify-between w-full">
@@ -50,26 +62,12 @@ const Header = ({ setIsMobileOpen }: HeaderProps) => {
             className="w-[200px] lg:w-[280px] h-[36px] bg-[#F2F2F2] rounded-[5px] border border-(--border-light-blue) pl-11 pr-4 text-sm focus:outline-none transition-colors placeholder:text-[#9CA3AF] font-normal"
           />
         </div>
-        {/* <button className="hover:text-gray-800 transition-colors cursor-pointer hidden md:block">
-          <img src={settings} alt="settings" className="size-6 lg:size-7" />
-        </button> */}
       </div>
 
       {/* Right side: Actions & Profile */}
       <div className="flex items-center gap-4 lg:gap-8">
         {/* Icons */}
         <div className="flex items-center gap-3 lg:gap-5">
-          {/* <button className="relative text-black hover:text-gray-800 transition-colors cursor-pointer hidden sm:block">
-            <img src={chatIcon} alt="chatIcon" className="size-6 lg:size-7" />
-            <span className="absolute -top-2 right-1 lg:right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-sky-blue text-[10px] font-semibold text-white">
-              5
-            </span>
-          </button> */}
-
-          {/* <button className="text-black hover:text-gray-800 transition-colors cursor-pointer hidden sm:block">
-            <Mail size={20} className="lg:w-6 lg:h-6" strokeWidth={1.5} />
-          </button> */}
-
           <button onClick={() => setNotifOpen((v) => !v)} className="text-black hover:text-gray-800 transition-colors cursor-pointer sm:-ml-2">
             <img src={Bell} alt="Bell" className="size-8 lg:size-10" />
           </button>
@@ -81,23 +79,29 @@ const Header = ({ setIsMobileOpen }: HeaderProps) => {
             />
 
         {/* User Profile */}
-        <div 
+        <div
           className="relative flex items-center gap-2 lg:gap-3 cursor-pointer"
           ref={dropdownRef}
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         >
           <div className="hidden sm:flex flex-col text-right">
             <span className="text-sm font-semibold text-[#1D3461]">
-              Adrian James
+              {displayName}
             </span>
-            <span className="text-xs text-text-gray">Dispatcher</span>
+            <span className="text-xs text-text-gray">{displayRole}</span>
           </div>
           <div className="relative">
-            <img
-              src="https://ui-avatars.com/api/?name=Adrian+James&background=f9a826&color=fff"
-              alt="Adrian James"
-              className="h-8 w-8 lg:h-10 lg:w-10 rounded-full object-cover"
-            />
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={displayName}
+                className="h-8 w-8 lg:h-10 lg:w-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-sky-blue flex items-center justify-center text-white text-xs lg:text-sm font-semibold">
+                {initials}
+              </div>
+            )}
             <span className="absolute bottom-0 right-0 h-2.5 w-2.5 lg:h-3 lg:w-3 rounded-full bg-green border-2 border-white"></span>
           </div>
 
@@ -106,12 +110,7 @@ const Header = ({ setIsMobileOpen }: HeaderProps) => {
             <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
               <button
                 className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log('Logout clicked');
-                  setIsDropdownOpen(false);
-                  navigate('/login')
-                }}
+                onClick={handleLogout}
               >
                 <LogOut size={16} />
                 <span className="font-medium">Logout</span>

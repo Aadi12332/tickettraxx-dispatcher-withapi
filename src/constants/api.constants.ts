@@ -14,3 +14,15 @@ export const STORAGE_KEYS = {
   REFRESH_TOKEN: "refreshToken",
   USER: "user",
 } as const;
+
+export const NOTIFICATION_ENDPOINTS = {
+  NOTIFICATIONS: "/notifications",
+  ALERTS: "/alerts",
+  MARK_READ: (id: string) => `/notifications/${id}/read`,
+  MARK_ALL_READ: "/notifications/read-all",
+} as const;
+
+export const DISPATCH_ENDPOINTS = {
+  GET_DISPATCHES: "/dispatches",
+  EXPORT_DISPATCH: (id: string) => `/dispatches/${id}/export`,
+} as const;
