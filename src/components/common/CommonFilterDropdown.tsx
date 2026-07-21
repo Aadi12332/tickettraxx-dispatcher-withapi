@@ -38,7 +38,7 @@ const CommonFilterDropdown = ({
             return (
               <div className="flex items-center gap-2 text-[#111827]">
                 {icon}
-                <p className="min-h-[20.3px] text-[11px]">{title}</p>
+                <p className="min-h-[20.3px] text-[14px]">{title}</p>
               </div>
             );
           }

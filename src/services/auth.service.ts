@@ -1,5 +1,15 @@
 import axiosInstance from "./axiosInstance";
-import { AUTH_ENDPOINTS, DISPATCH_ENDPOINTS, NOTIFICATION_ENDPOINTS } from "../constants/api.constants";
+import {
+  API_CONSTANTS,
+  AUTH_ENDPOINTS,
+  CONTRACTOR_ENDPOINTS,
+  CUSTOMER_ENDPOINTS,
+  DISPATCH_ENDPOINTS,
+  FSC_ENDPOINTS,
+  JOB_ENDPOINTS,
+  MATERIAL_ENDPOINTS,
+  NOTIFICATION_ENDPOINTS,
+} from "../constants/api.constants";
 import type {
   LoginPayload,
   LoginResponse,
@@ -11,49 +21,72 @@ import type {
   ResetPasswordResponse,
   NotificationResponse,
   AlertResponse,
+  UpdateMaterialPayload,
+  UpdateMaterialResponse,
+  CreateMaterialPayload,
+  CreateMaterialResponse,
+  MaterialListResponse,
+  CustomerListResponse,
+  FscListResponse,
+  CreateFscPayload,
+  UpdateFscPayload,
+  FscResponse,
+  GetSitesResponse,
+  CreateSitePayload,
+  SiteResponse,
+  UpdateSitePayload,
+  ContractorListResponse,
+  ContractorPayload,
+  ContractorResponse,
+  JobListResponse,
+  CreateJobPayload,
+  JobResponse,
+  UpdateJobPayload,
 } from "../types/auth.types";
 
-export const loginApi = async (payload: LoginPayload): Promise<LoginResponse> => {
+export const loginApi = async (
+  payload: LoginPayload,
+): Promise<LoginResponse> => {
   const { data } = await axiosInstance.post<LoginResponse>(
     AUTH_ENDPOINTS.LOGIN,
-    payload
+    payload,
   );
   return data;
 };
 
 export const forgotPasswordApi = async (
-  payload: ForgotPasswordPayload
+  payload: ForgotPasswordPayload,
 ): Promise<ForgotPasswordResponse> => {
   const { data } = await axiosInstance.post<ForgotPasswordResponse>(
     AUTH_ENDPOINTS.FORGOT_PASSWORD,
-    payload
+    payload,
   );
   return data;
 };
 
 export const verifyOtpApi = async (
-  payload: VerifyOtpPayload
+  payload: VerifyOtpPayload,
 ): Promise<VerifyOtpResponse> => {
   const { data } = await axiosInstance.post<VerifyOtpResponse>(
     AUTH_ENDPOINTS.VERIFY_OTP,
-    payload
+    payload,
   );
   return data;
 };
 
 export const resetPasswordApi = async (
-  payload: ResetPasswordPayload
+  payload: ResetPasswordPayload,
 ): Promise<ResetPasswordResponse> => {
   const { data } = await axiosInstance.post<ResetPasswordResponse>(
     AUTH_ENDPOINTS.RESET_PASSWORD,
-    payload
+    payload,
   );
   return data;
 };
 
 export const getNotificationsApi = async (): Promise<NotificationResponse> => {
   const { data } = await axiosInstance.get<NotificationResponse>(
-    NOTIFICATION_ENDPOINTS.NOTIFICATIONS
+    NOTIFICATION_ENDPOINTS.NOTIFICATIONS,
   );
 
   return data;
@@ -61,17 +94,15 @@ export const getNotificationsApi = async (): Promise<NotificationResponse> => {
 
 export const getAlertsApi = async (): Promise<AlertResponse> => {
   const { data } = await axiosInstance.get<AlertResponse>(
-    NOTIFICATION_ENDPOINTS.ALERTS
+    NOTIFICATION_ENDPOINTS.ALERTS,
   );
 
   return data;
 };
 
-export const markNotificationReadApi = async (
-  notificationId: string
-) => {
+export const markNotificationReadApi = async (notificationId: string) => {
   const { data } = await axiosInstance.patch(
-    NOTIFICATION_ENDPOINTS.MARK_READ(notificationId)
+    NOTIFICATION_ENDPOINTS.MARK_READ(notificationId),
   );
 
   return data;
@@ -79,7 +110,7 @@ export const markNotificationReadApi = async (
 
 export const markAllNotificationsReadApi = async () => {
   const { data } = await axiosInstance.post(
-    NOTIFICATION_ENDPOINTS.MARK_ALL_READ
+    NOTIFICATION_ENDPOINTS.MARK_ALL_READ,
   );
 
   return data;
@@ -87,7 +118,7 @@ export const markAllNotificationsReadApi = async () => {
 
 export const getDispatchesApi = async (page = 1, limit = 10) => {
   const { data } = await axiosInstance.get(
-    `${DISPATCH_ENDPOINTS.GET_DISPATCHES}?page=${page}&limit=${limit}`
+    `${DISPATCH_ENDPOINTS.GET_DISPATCHES}?page=${page}&limit=${limit}`,
   );
 
   return data;
@@ -95,8 +126,200 @@ export const getDispatchesApi = async (page = 1, limit = 10) => {
 
 export const exportDispatchApi = async (id: string) => {
   const { data } = await axiosInstance.get(
-    DISPATCH_ENDPOINTS.EXPORT_DISPATCH(id)
+    DISPATCH_ENDPOINTS.EXPORT_DISPATCH(id),
   );
 
   return data;
+};
+
+export const getMaterialsApi = async (
+  page = 1,
+  limit = 20,
+): Promise<MaterialListResponse> => {
+  const { data } = await axiosInstance.get<MaterialListResponse>(
+    MATERIAL_ENDPOINTS.MATERIALS,
+    { params: { page, limit } },
+  );
+  return data;
+};
+
+export const createMaterialApi = async (
+  payload: CreateMaterialPayload,
+): Promise<CreateMaterialResponse> => {
+  const { data } = await axiosInstance.post<CreateMaterialResponse>(
+    MATERIAL_ENDPOINTS.MATERIALS,
+    payload,
+  );
+  return data;
+};
+
+export const updateMaterialApi = async (
+  id: string,
+  payload: UpdateMaterialPayload,
+): Promise<UpdateMaterialResponse> => {
+  const { data } = await axiosInstance.patch<UpdateMaterialResponse>(
+    MATERIAL_ENDPOINTS.MATERIAL_BY_ID(id),
+    payload,
+  );
+  return data;
+};
+
+export const deleteMaterialApi = async (id: string): Promise<void> => {
+  await axiosInstance.delete(MATERIAL_ENDPOINTS.MATERIAL_BY_ID(id));
+};
+
+export const getCustomersApi = async (
+  page = 1,
+  limit = 100,
+): Promise<CustomerListResponse> => {
+  const { data } = await axiosInstance.get<CustomerListResponse>(
+    CUSTOMER_ENDPOINTS.CUSTOMERS,
+    { params: { page, limit } },
+  );
+  return data;
+};
+
+export const getFscApi = async (
+  page = 1,
+  limit = 20,
+): Promise<FscListResponse> => {
+  const { data } = await axiosInstance.get<FscListResponse>(FSC_ENDPOINTS.FSC, {
+    params: { page, limit },
+  });
+  return data;
+};
+
+export const createFscApi = async (
+  payload: CreateFscPayload,
+): Promise<FscResponse> => {
+  const { data } = await axiosInstance.post<FscResponse>(
+    FSC_ENDPOINTS.FSC,
+    payload,
+  );
+  return data;
+};
+
+export const updateFscApi = async (
+  id: string,
+  payload: UpdateFscPayload,
+): Promise<FscResponse> => {
+  const { data } = await axiosInstance.patch<FscResponse>(
+    FSC_ENDPOINTS.FSC_BY_ID(id),
+    payload,
+  );
+  return data;
+};
+
+export const deleteFscApi = async (id: string): Promise<void> => {
+  await axiosInstance.delete(FSC_ENDPOINTS.FSC_BY_ID(id));
+};
+
+export const siteService = {
+  getSites: async (params?: {
+    page?: number;
+    limit?: number;
+    type?: "pickup" | "deliver";
+    search?: string;
+  }): Promise<GetSitesResponse> => {
+    const response = await axiosInstance.get<GetSitesResponse>(
+      API_CONSTANTS.SITES.BASE,
+      { params },
+    );
+    return response.data;
+  },
+
+  createSite: async (payload: CreateSitePayload): Promise<SiteResponse> => {
+    const response = await axiosInstance.post<SiteResponse>(
+      API_CONSTANTS.SITES.BASE,
+      payload,
+    );
+    return response.data;
+  },
+
+  updateSite: async (
+    id: string,
+    payload: UpdateSitePayload,
+  ): Promise<SiteResponse> => {
+    const response = await axiosInstance.patch<SiteResponse>(
+      API_CONSTANTS.SITES.BY_ID(id),
+      payload,
+    );
+    return response.data;
+  },
+
+  deleteSite: async (id: string): Promise<void> => {
+    await axiosInstance.delete(API_CONSTANTS.SITES.BY_ID(id));
+  },
+};
+
+export const getContractorsApi = async (
+  page = 1,
+  limit = 20
+): Promise<ContractorListResponse> => {
+  const { data } = await axiosInstance.get<ContractorListResponse>(
+    CONTRACTOR_ENDPOINTS.CONTRACTORS,
+    { params: { page, limit } }
+  );
+  return data;
+};
+ 
+export const createContractorApi = async (
+  payload: ContractorPayload
+): Promise<ContractorResponse> => {
+  const { data } = await axiosInstance.post<ContractorResponse>(
+    CONTRACTOR_ENDPOINTS.CONTRACTORS,
+    payload
+  );
+  return data;
+};
+ 
+export const updateContractorApi = async (
+  id: string,
+  payload: Partial<ContractorPayload>
+): Promise<ContractorResponse> => {
+  const { data } = await axiosInstance.patch<ContractorResponse>(
+    CONTRACTOR_ENDPOINTS.CONTRACTOR_BY_ID(id),
+    payload
+  );
+  return data;
+};
+ 
+export const deleteContractorApi = async (id: string): Promise<void> => {
+  await axiosInstance.delete(CONTRACTOR_ENDPOINTS.CONTRACTOR_BY_ID(id));
+};
+
+export const getJobsApi = async (
+  page = 1,
+  limit = 20,
+): Promise<JobListResponse> => {
+  const { data } = await axiosInstance.get<JobListResponse>(
+    JOB_ENDPOINTS.JOBS,
+    { params: { page, limit } },
+  );
+  return data;
+};
+
+export const createJobApi = async (
+  payload: CreateJobPayload,
+): Promise<JobResponse> => {
+  const { data } = await axiosInstance.post<JobResponse>(
+    JOB_ENDPOINTS.JOBS,
+    payload,
+  );
+  return data;
+};
+
+export const updateJobApi = async (
+  id: string,
+  payload: UpdateJobPayload,
+): Promise<JobResponse> => {
+  const { data } = await axiosInstance.patch<JobResponse>(
+    JOB_ENDPOINTS.JOB_BY_ID(id),
+    payload,
+  );
+  return data;
+};
+
+export const deleteJobApi = async (id: string): Promise<void> => {
+  await axiosInstance.delete(JOB_ENDPOINTS.JOB_BY_ID(id));
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { PlusCircle } from "lucide-react";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
@@ -9,6 +9,8 @@ import Table from "../../components/common/Table";
 import CreatePickupModal from "../../components/pickup/modal/CreatePickupModal";
 import CalendarModal from "../../components/common/modal/CalendorModal";
 import CommonButton from "../../components/common/CommonButton";
+import type { Site } from "../../types/auth.types";
+import { siteService } from "../../services/auth.service";
 
 const columns = [
   { label: "#", key: "id", width: "70px" },
@@ -20,98 +22,29 @@ const columns = [
   { label: "Details", key: "actions" },
 ];
 
-const data = [
-  {
-    id: 1,
-    customer: "AMRIZE",
-    type: "Pickup",
-    pickupDeliver: "AMRIZE-Ambrose",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-01",
-  },
-  {
-    id: 2,
-    customer: "HEIDELBERG MATERIALS",
-    type: "Pickup",
-    pickupDeliver: "HBERG-Bridgeport",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-02",
-  },
-  {
-    id: 3,
-    customer: "RAVENNA-1",
-    type: "Pickup",
-    pickupDeliver: "HBERG-LakeBP",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-03",
-  },
-  {
-    id: 4,
-    customer: "RAVENNA-2",
-    type: "Pickup",
-    pickupDeliver: "HBERG-LakeBP",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-04",
-  },
-  {
-    id: 5,
-    customer: "HEIDELBERG MATERIALS",
-    type: "Deliver",
-    pickupDeliver: "4954 Blue Mound",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-05",
-  },
-  {
-    id: 6,
-    customer: "MARTIN MARIETTA",
-    type: "Pickup",
-    pickupDeliver: "HBERG-LakeBP",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-06",
-  },
-  {
-    id: 7,
-    customer: "MARTIN MARIETTA",
-    type: "Deliver",
-    pickupDeliver: "4950 Plano",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-07",
-  },
-  {
-    id: 8,
-    customer: "HEIDELBERG MATERIALS",
-    type: "Deliver",
-    pickupDeliver: "4951 Denton",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-08",
-  },
-  {
-    id: 9,
-    customer: "AMRIZE",
-    type: "Deliver",
-    pickupDeliver: "4952 Lewisville",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-09",
-  },
-  {
-    id: 10,
-    customer: "AMRIZE",
-    type: "Deliver",
-    pickupDeliver: "4958 McKinney",
-    contractorRate: "$12.00",
-    invoiceRate: "$14.00",
-    date: "2026-07-10",
-  },
-];
+interface PickupRow {
+  id: number;
+  siteId: string;
+  customer: string;
+  type: string;
+  pickupDeliver: string;
+  contractorRate: string;
+  invoiceRate: string;
+  date: string;
+  raw: Site;
+}
+
+const mapSiteToRow = (site: Site, index: number): PickupRow => ({
+  id: index + 1,
+  siteId: site._id,
+  customer: site.customerId?.name || "—",
+  type: site.type === "pickup" ? "Pickup" : "Deliver",
+  pickupDeliver: site.name,
+  contractorRate: `$${site.contractorRate.toFixed(2)}`,
+  invoiceRate: `$${site.invoiceRate.toFixed(2)}`,
+  date: site.createdAt,
+  raw: site,
+});
 
 const PickupPage = () => {
   const [openModal, setOpenModal] = useState(false);
@@ -119,10 +52,56 @@ const PickupPage = () => {
   const [entries, setEntries] = useState(10);
   const [openCalendarModal, setOpenCalendarModal] = useState(false);
   const [openEditPickup, setOpenEditPickup] = useState(false);
+  const [editingSite, setEditingSite] = useState<Site | null>(null);
+
+  const [sites, setSites] = useState<Site[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
+
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1,
+  });
 
   const [selectedDate, setSelectedDate] = useState<
     [Dayjs | null, Dayjs | null]
   >([null, null]);
+
+  const fetchSites = useCallback(
+    async (page = pagination.page, limit = pagination.limit) => {
+      setLoading(true);
+      setFetchError("");
+
+      try {
+        const res = await siteService.getSites({ page, limit });
+
+        setSites(res.data || []);
+        setPagination(res.pagination);
+      } catch (err: unknown) {
+        setFetchError(
+          err instanceof Error ? err.message : "Failed to load sites.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pagination.page, pagination.limit],
+  );
+
+  useEffect(() => {
+    void fetchSites(pagination.page, pagination.limit);
+  }, [fetchSites, pagination.page, pagination.limit]);
+
+const handleDeleteSite = async (siteId: string) => {
+  try {
+    await siteService.deleteSite(siteId);
+    await fetchSites(pagination.page, pagination.limit);
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   const formatDateRange = () => {
     const [start, end] = selectedDate;
@@ -138,7 +117,16 @@ const PickupPage = () => {
     return "";
   };
 
-  const filteredData = data
+  const rows = useMemo(
+    () =>
+      sites.map((site, index) => ({
+        ...mapSiteToRow(site, index),
+        id: (pagination.page - 1) * pagination.limit + index + 1,
+      })),
+    [sites, pagination.page, pagination.limit],
+  );
+
+  const filteredData = rows
     .filter((item) => {
       if (!search) return true;
 
@@ -168,8 +156,7 @@ const PickupPage = () => {
       }
 
       return true;
-    })
-    .slice(0, entries);
+    });
 
   return (
     <div className="space-y-6">
@@ -196,26 +183,60 @@ const PickupPage = () => {
           dateRange={formatDateRange()}
           onDateClick={() => setOpenCalendarModal(true)}
           entries={entries}
-          onEntriesChange={setEntries}
+          onEntriesChange={(val) => {
+            setEntries(val);
+            setPagination((prev) => ({
+              ...prev,
+              page: 1,
+              limit: val,
+            }));
+          }}
         />
 
-        <Table
-          columns={columns}
-          data={filteredData}
-          onEdit={() => setOpenEditPickup(true)}
-          minWidth="min-w-[1000px]"
-        />
+        {loading && (
+          <p className="text-center text-[#717182] py-6">Loading sites...</p>
+        )}
+
+        {!loading && fetchError && (
+          <p className="text-center text-red-500 py-6">{fetchError}</p>
+        )}
+
+        {!loading && !fetchError && (
+          <Table
+            columns={columns}
+            data={filteredData}
+            currentPage={pagination.page}
+            totalPages={pagination.pages}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+            onPageChange={(page) => {
+              fetchSites(page, pagination.limit);
+            }}
+            onEdit={(row: PickupRow) => {
+              setEditingSite(row.raw);
+              setOpenEditPickup(true);
+            }}
+            onDelete={(row: PickupRow) => handleDeleteSite(row.siteId)}
+            minWidth="min-w-[1000px]"
+          />
+        )}
       </div>
 
       <CreatePickupModal
         open={openModal}
         onClose={() => setOpenModal(false)}
+        onSuccess={fetchSites}
       />
 
       <CreatePickupModal
         open={openEditPickup}
-        onClose={() => setOpenEditPickup(false)}
+        onClose={() => {
+          setOpenEditPickup(false);
+          setEditingSite(null);
+        }}
         isEdit
+        editingSite={editingSite}
+        onSuccess={fetchSites}
       />
 
       <CalendarModal

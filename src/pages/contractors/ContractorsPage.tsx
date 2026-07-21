@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Calendar1, Funnel, Plus, RefreshCcw } from "lucide-react";
+import axios from "axios";
 import PageHeader from "../../components/common/PageHeader";
 import Table from "../../components/common/Table";
 import CommonButton from "../../components/common/CommonButton";
@@ -17,34 +18,13 @@ import dayjs from "dayjs";
 import CommonSearchInput from "../../components/common/CommonSearchInput";
 import ExportButton from "../../components/common/ExportButton";
 import LoadUpdateSuccessModal from "../../components/common/modal/LoadUpdateSuccessModal";
+import {
+  getContractorsApi,
+  deleteContractorApi,
+  updateContractorApi,
+} from "../../services/auth.service";
+import type { Contractor, ContractorPagination } from "../../types/auth.types";
 
-const statsData = [
-  {
-    title: "Total Contractors",
-    value: 300,
-    icon: <img src={userGroup} alt="userGroup" className="" />,
-  },
-  {
-    title: "Active Contractors",
-    value: 270,
-    icon: <img src={activeUsers} alt="activeUsers" className="" />,
-  },
-  {
-    title: "Inactive Contractors",
-    value: 30,
-    icon: <img src={inActiveUsers} alt="inActiveUsers" className="" />,
-  },
-  {
-    title: "Active Drivers",
-    value: 30,
-    icon: <img src={activeDrivers} alt="activeDrivers" className="" />,
-  },
-  {
-    title: "Inactive Drivers",
-    value: 30,
-    icon: <img src={inActiveUsers} alt="inActiveDrivers" className="" />,
-  },
-];
 export const columns = [
   { label: "Driver Name", key: "driverName" },
   { label: "Contractor", key: "contractor" },
@@ -53,207 +33,98 @@ export const columns = [
   { label: "Phone", key: "phone" },
   { label: "Email", key: "email" },
   { label: "Status", key: "status" },
+  { label: "Details", key: "actions" },
 ];
 
-export const data = [
-  {
-    id: "1",
-    driverName: "Marley Levin",
-    contractor: "Skyline Contractors",
-    parkingLocation: "Sunnyvale",
-    unitNumber: "124",
-    phone: "(555) 012-3456",
-    email: "alice@example.com",
-    status: "Active",
-    createdAt: "2026-07-01",
-  },
-  {
-    id: "2",
-    driverName: "Lydia Culhane",
-    contractor: "Golden State Builders",
-    parkingLocation: "Emerald City",
-    unitNumber: "017",
-    phone: "(555) 987-6543",
-    email: "bob@example.com",
-    status: "Inactive",
-    createdAt: "2026-06-01",
-  },
-  {
-    id: "3",
-    driverName: "Zaire Stanton",
-    contractor: "Lone Star Renovations",
-    parkingLocation: "Capitol Heights",
-    unitNumber: "124",
-    phone: "(555) 234-5678",
-    email: "charlie@example.com",
-    status: "Active",
-    createdAt: "2026-07-02",
-  },
-  {
-    id: "4",
-    driverName: "Wilson Ekstrom Bothman",
-    contractor: "Peach State Construction",
-    parkingLocation: "Silver Lake",
-    unitNumber: "17",
-    phone: "(555) 876-5432",
-    email: "dave@example.com",
-    status: "Active",
-    createdAt: "2026-06-11",
-  },
-  {
-    id: "5",
-    driverName: "Jaydon Geidt",
-    contractor: "Pacific Coast Contractors",
-    parkingLocation: "Maplewood",
-    unitNumber: "36",
-    phone: "(555) 345-6789",
-    email: "eve@example.com",
-    status: "Active",
-    createdAt: "2026-05-01",
-  },
-  {
-    id: "6",
-    driverName: "Ruben Ekstrom Bothman",
-    contractor: "Sunshine State Services",
-    parkingLocation: "Golden State",
-    unitNumber: "369",
-    phone: "(555) 654-3210",
-    email: "frank@example.com",
-    status: "Inactive",
-    createdAt: "2026-07-3",
-  },
-    {
-    id: "7",
-    driverName: "Hanna Korsgaard",
-    contractor: "Keystone Construction",
-    parkingLocation: "Peachland",
-    unitNumber: "78",
-    phone: "(555) 456-7890",
-    email: "grace@example.com",
-    status: "Active",
-    createdAt: "2026-07-04",
-  },
-  {
-    id: "8",
-    driverName: "Angel Philips",
-    contractor: "Evergreen Builders",
-    parkingLocation: "Houstonville",
-    unitNumber: "65",
-    phone: "(555) 321-0987",
-    email: "heidi@example.com",
-    status: "Active",
-    createdAt: "2026-07-05",
-  },
-  {
-    id: "9",
-    driverName: "Jordyn Bator",
-    contractor: "Cali Dream Contractors",
-    parkingLocation: "Sunshine State",
-    unitNumber: "85",
-    phone: "(555) 789-0123",
-    email: "ivan@example.com",
-    status: "Active",
-    createdAt: "2026-07-06",
-  },
-  {
-    id: "10",
-    driverName: "Giana Rosser",
-    contractor: "Urban Heights Construction",
-    parkingLocation: "Liberty County",
-    unitNumber: "12",
-    phone: "(555) 210-9876",
-    email: "judy@example.com",
-    status: "Active",
-    createdAt: "2026-07-07",
-  },
-  {
-    id: "11",
-    driverName: "Joseph Martin",
-    contractor: "Blue Horizon Builders",
-    parkingLocation: "Riverside",
-    unitNumber: "210",
-    phone: "(555) 112-3344",
-    email: "joseph@example.com",
-    status: "Inactive",
-    createdAt: "2026-07-08",
-  },
-  {
-    id: "12",
-    driverName: "David Hudson",
-    contractor: "Prime Construction Group",
-    parkingLocation: "Oakridge",
-    unitNumber: "311",
-    phone: "(555) 223-4455",
-    email: "david@example.com",
-    status: "Active",
-    createdAt: "2026-07-09",
-  },
-  {
-    id: "13",
-    driverName: "Steve John",
-    contractor: "Mountain Peak Contractors",
-    parkingLocation: "Brookfield",
-    unitNumber: "102",
-    phone: "(555) 334-5566",
-    email: "steve@example.com",
-    status: "Active",
-    createdAt: "2026-07-10",
-  },
-  {
-    id: "14",
-    driverName: "James Harry",
-    contractor: "Western Valley Builders",
-    parkingLocation: "Riverton",
-    unitNumber: "456",
-    phone: "(555) 445-6677",
-    email: "james@example.com",
-    status: "Inactive",
-    createdAt: "2026-07-11",
-  },
-  {
-    id: "15",
-    driverName: "Carter Donin",
-    contractor: "Capital City Construction",
-    parkingLocation: "Crestview",
-    unitNumber: "225",
-    phone: "(555) 556-7788",
-    email: "carter@example.com",
-    status: "Active",
-    createdAt: "2026-07-12",
-  },
-  {
-    id: "16",
-    driverName: "Charlie John",
-    contractor: "Sunrise Infrastructure",
-    parkingLocation: "Maplewood",
-    unitNumber: "118",
-    phone: "(555) 667-8899",
-    email: "charliej@example.com",
-    status: "Active",
-    createdAt: "2026-07-13",
-  },
-];
+// Table row shape ke saath compatible rehne ke liye Contractor ko map karte hain,
+// lekin _id jaisa original field bhi rakhte hain taaki edit/delete/status-toggle easily ho sake
+type ContractorRow = Contractor & {
+  id: string;
+  driverName: string;
+  contractor: string;
+  phone: string;
+  status: "Active" | "Inactive";
+};
+
+const mapContractorToRow = (item: Contractor): ContractorRow => ({
+  ...item,
+  id: item._id,
+  driverName: item.primaryDriverName,
+  contractor: item.companyName,
+  phone: item.companyTelephone || "-",
+  status: item.status === "active" ? "Active" : "Inactive",
+});
+
 const ContractorsPage = () => {
   const [search, setSearch] = useState("");
-  const [entries] = useState(10);
   const [openCalendarModal, setOpenCalendarModal] = useState(false);
   const [openCreateContractorModal, setOpenCreateContractorModal] =
     useState(false);
+  const [editContractorModalOpen, setEditContractorModalOpen] = useState(false);
+  const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(
+    null
+  );
   const [filter, setFilter] = useState("");
   const [selectedDate, setSelectedDate] = useState<
     [Dayjs | null, Dayjs | null]
   >([null, null]);
 
-  const [contractors, setContractors] = useState(data);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [pagination, setPagination] = useState<ContractorPagination>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1,
+  });
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successTitle, setSuccessTitle] = useState(
+    "You have successfully loaded the contractors."
+  );
+
+  const fetchContractors = async (page = pagination.page, limit = pagination.limit) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await getContractorsApi(page, limit);
+      setContractors(res.data);
+      setPagination(res.pagination);
+    } catch {
+      setError("Unable to load contractors. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContractors(1, pagination.limit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleUpdate = () => {
+    setSuccessTitle("You have successfully loaded the contractors.");
+    fetchContractors(pagination.page, pagination.limit);
     setShowSuccessModal(true);
 
     setTimeout(() => {
       setShowSuccessModal(false);
     }, 3000);
+  };
+
+  const handleCreateSuccess = () => {
+    setSuccessTitle("You have successfully added the contractor.");
+    fetchContractors(1, pagination.limit);
+    setShowSuccessModal(true);
+    setTimeout(() => setShowSuccessModal(false), 3000);
+  };
+
+  const handleUpdateSuccess = () => {
+    setSuccessTitle("You have successfully updated the contractor.");
+    fetchContractors(pagination.page, pagination.limit);
+    setShowSuccessModal(true);
+    setTimeout(() => setShowSuccessModal(false), 3000);
   };
 
   const formatDateRange = () => {
@@ -270,24 +141,28 @@ const ContractorsPage = () => {
     return "Select Date Range";
   };
 
-  const handleStatusToggle = (item: any) => {
-    console.log("clicked", item);
-    setContractors((prev) =>
-      prev.map((row) =>
-        row.id === item.id
-          ? {
-              ...row,
-              status: row.status === "Active" ? "Inactive" : "Active",
-            }
-          : row,
-      ),
-    );
+  const handleStatusToggle = async (item: ContractorRow) => {
+    const newStatus = item.status === "Active" ? "inactive" : "active";
+    try {
+      await updateContractorApi(item._id, { status: newStatus });
+      fetchContractors(pagination.page, pagination.limit);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Unable to update status.");
+      } else {
+        setError("Unable to update status.");
+      }
+    }
   };
-  const navigate = useNavigate();
-  const filteredData = useMemo(() => {
-    let filtered = [...contractors];
 
-    // Search
+  const navigate = useNavigate();
+
+  const rows = useMemo(() => contractors.map(mapContractorToRow), [contractors]);
+
+  const filteredData = useMemo(() => {
+    let filtered = [...rows];
+
+    // Search — current page ke data par (server-side search param nahi diya gaya hai)
     if (search.trim()) {
       filtered = filtered.filter((item) =>
         Object.values(item).some((value) =>
@@ -319,22 +194,63 @@ const ContractorsPage = () => {
       });
     }
 
-    // Existing dropdown filter
+    // Period dropdown filter (30/90/180/365 days)
     if (filter) {
+      const days = Number(filter);
       filtered = filtered.filter((item) => {
-        const days = Number(filter);
-        return Number(item.id) <= days / 30;
+        const itemDate = dayjs(item.createdAt);
+        return itemDate.isAfter(dayjs().subtract(days, "day"));
       });
     }
 
-    return filtered.slice(0, entries);
-  }, [contractors, search, entries, filter, selectedDate]);
+    return filtered;
+  }, [rows, search, filter, selectedDate]);
 
-  const handleDelete = (item: any) => {
-    setContractors((prev) =>
-      prev.filter((contractor) => contractor.id !== item.id),
-    );
+  const handleDelete = async (item: ContractorRow) => {
+    try {
+      await deleteContractorApi(item._id);
+      if (contractors.length === 1 && pagination.page > 1) {
+        fetchContractors(pagination.page - 1, pagination.limit);
+      } else {
+        fetchContractors(pagination.page, pagination.limit);
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Unable to delete contractor.");
+      } else {
+        setError("Unable to delete contractor.");
+      }
+    }
   };
+
+  const statsData = [
+    {
+      title: "Total Contractors",
+      value: pagination.total,
+      icon: <img src={userGroup} alt="userGroup" className="" />,
+    },
+    {
+      title: "Active Contractors",
+      value: rows.filter((r) => r.status === "Active").length,
+      icon: <img src={activeUsers} alt="activeUsers" className="" />,
+    },
+    {
+      title: "Inactive Contractors",
+      value: rows.filter((r) => r.status === "Inactive").length,
+      icon: <img src={inActiveUsers} alt="inActiveUsers" className="" />,
+    },
+    {
+      title: "Active Drivers",
+      value: rows.filter((r) => r.status === "Active").length,
+      icon: <img src={activeDrivers} alt="activeDrivers" className="" />,
+    },
+    {
+      title: "Inactive Drivers",
+      value: rows.filter((r) => r.status === "Inactive").length,
+      icon: <img src={inActiveUsers} alt="inActiveDrivers" className="" />,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -363,14 +279,12 @@ const ContractorsPage = () => {
           >
             Add Contractor
           </CommonButton>
-          {/* Export */}
           <ExportButton
             onClick={() => {
               console.log("Export started...");
             }}
           />
 
-          {/* Refresh */}
           <CommonButton
             size="sm"
             variant="secondary"
@@ -380,6 +294,9 @@ const ContractorsPage = () => {
           />
         </div>
       </PageHeader>
+
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
       <div className="">
         <div className="py-4 pb-0 space-y-4 ">
           <div className=" bg-white p-1.5">
@@ -407,14 +324,29 @@ const ContractorsPage = () => {
               ))}
             </div>
           </div>
-          <Table
-            columns={columns}
-            data={filteredData}
-            onEdit={(item) => console.log("Edit Material:", item)}
-            onDelete={handleDelete}
-            onStatusToggle={handleStatusToggle}
-            onRowClick={(item) => navigate(`/contractors/view/${item.id}`)}
-          />
+
+          {loading ? (
+            <p className="text-sm text-[#979797] py-6 text-center">Loading contractors...</p>
+          ) : (
+            <Table
+              columns={columns}
+              data={filteredData}
+              currentPage={pagination.page}
+              totalPages={pagination.pages}
+              totalItems={pagination.total}
+              pageSize={pagination.limit}
+              onPageChange={(page: number) => {
+                fetchContractors(page, pagination.limit);
+              }}
+              onEdit={(item) => {
+                setSelectedContractor(item as ContractorRow);
+                setEditContractorModalOpen(true);
+              }}
+              onDelete={(item) => handleDelete(item as ContractorRow)}
+              onStatusToggle={(item) => handleStatusToggle(item as ContractorRow)}
+              onRowClick={(item) => navigate(`/contractors/view/${item.id}`)}
+            />
+          )}
         </div>
       </div>
       <CalendarModal
@@ -426,12 +358,24 @@ const ContractorsPage = () => {
       <ContractorModal
         open={openCreateContractorModal}
         onClose={() => setOpenCreateContractorModal(false)}
+        onSuccess={handleCreateSuccess}
+      />
+
+      <ContractorModal
+        open={editContractorModalOpen}
+        onClose={() => {
+          setEditContractorModalOpen(false);
+          setSelectedContractor(null);
+        }}
+        isEdit
+        editData={selectedContractor}
+        onSuccess={handleUpdateSuccess}
       />
 
       <LoadUpdateSuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
-        title="You have successfully loaded the contractors."
+        title={successTitle}
       />
     </div>
   );

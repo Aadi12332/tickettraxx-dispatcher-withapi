@@ -8,11 +8,20 @@ import CommonButton from "../common/CommonButton";
 import { useEffect, useState } from "react";
 import { parkingLocationOptions, truckOptions } from "../../utils/data";
 import CommonPhoneInput from "../common/CommonPhoneInput";
+import axios from "axios";
+import {
+  createContractorApi,
+  updateContractorApi,
+} from "../../services/auth.service";
+import type { Contractor } from "../../types/auth.types";
 
 interface ContractorModalProps {
   open: boolean;
   onClose: () => void;
   isEdit?: boolean;
+  editData?: Contractor | null;
+  // Create/update successful hone ke baad parent ko batane ke liye, taaki list refresh ho sake
+  onSuccess?: () => void;
 }
 
 const stateOptions = [
@@ -56,7 +65,13 @@ const idTypeOptions = [
   { label: "State ID", value: "State ID" },
   { label: "Tax ID", value: "Tax ID" },
 ];
+
 const initialForm = {
+  companyName: "",
+  primaryDriverName: "",
+  unitNumber: "",
+  email: "",
+
   zipCode: "",
   state: "",
   city: "",
@@ -74,7 +89,6 @@ const initialForm = {
   ownerOperatorFleet: "",
   phoneCode: "+1",
   companyTelephone: "",
-  email: "",
   payPercentage: "",
   contactName: "",
   unit: "",
@@ -84,51 +98,117 @@ const initialForm = {
   contractFile: null as File | null,
   coiFile: null as File | null,
 };
+
 const ContractorModal = ({
   open,
   onClose,
   isEdit = false,
+  editData,
+  onSuccess,
 }: ContractorModalProps) => {
   const [form, setForm] = useState(initialForm);
   const [cityOptionsState, setCityOptionsState] = useState(cityOptions);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const handleClose = () => {
     setForm(initialForm);
+    setError("");
     onClose();
   };
 
-  const handleSubmit = () => {
-    handleClose();
+  const handleSubmit = async () => {
+    setError("");
+
+    if (!form.companyName.trim() || !form.primaryDriverName.trim() || !form.email.trim()) {
+      setError("Please fill company name, driver name and email");
+      return;
+    }
+
+    // Files JSON body me nahi bheji ja sakti (multipart upload chahiye), baaki sab fields bhej rahe hain
+    const payload = {
+      companyName: form.companyName.trim(),
+      primaryDriverName: form.primaryDriverName.trim(),
+      unitNumber: form.unit,
+      email: form.email.trim(),
+      parkingLocation: form.parkingLocation,
+      zipCode: form.zipCode,
+      state: form.state,
+      city: form.city,
+      usdot: form.usdot,
+      txdot: form.txdot,
+      signatureDate: form.signatureDate,
+      expirationDate: form.expirationDate,
+      address: form.address,
+      idType: form.idType,
+      idNumber: form.id,
+      ownerOperatorFleet: form.ownerOperatorFleet,
+      phoneCode: form.phoneCode,
+      companyTelephone: form.companyTelephone,
+      payPercentage: form.payPercentage,
+      contactName: form.contactName,
+      trucks: form.trucks,
+      truckCount: form.truckCount,
+      autoRenewal: form.autoRenewal,
+    };
+
+    setLoading(true);
+    try {
+      if (isEdit && editData) {
+        await updateContractorApi(editData._id, payload);
+      } else {
+        await createContractorApi(payload);
+      }
+
+      onSuccess?.();
+      handleClose();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Something went wrong. Please try again.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
   useEffect(() => {
     if (!open) return;
 
-    if (isEdit) {
+    if (isEdit && editData) {
       setForm({
         ...initialForm,
-        zipCode: "10008",
-        state: "California",
-        city: "Granite City",
-        parkingLocation: "Granite Ridge",
-        usdot: "1234567",
-        txdot: "TX-98765",
-        signatureDate: "2026-01-01",
-        expirationDate: "2026-12-31",
-        address: "1861 Bayonne Ave, Manchester, NJ",
-        idType: "License",
-        id: "A12345678",
-        ownerOperatorFleet: "Hudson Freight",
-        companyTelephone: "+1 458 7877 879",
-        email: "perralt12@example.com",
-        payPercentage: "8",
-        trucks: "1-5",
-        contactName: "John Mason",
-        unit: "12",
-        autoRenewal: true,
+        companyName: editData.companyName ?? "",
+        primaryDriverName: editData.primaryDriverName ?? "",
+        unit: editData.unitNumber ?? "",
+        email: editData.email ?? "",
+        zipCode: editData.zipCode ?? "",
+        state: editData.state ?? "",
+        city: editData.city ?? "",
+        parkingLocation: editData.parkingLocation ?? "",
+        usdot: editData.usdot ?? "",
+        txdot: editData.txdot ?? "",
+        signatureDate: editData.signatureDate ?? "",
+        expirationDate: editData.expirationDate ?? "",
+        address: editData.address ?? "",
+        idType: editData.idType ?? "",
+        id: editData.idNumber ?? "",
+        ownerOperatorFleet: editData.ownerOperatorFleet ?? "",
+        phoneCode: editData.phoneCode ?? "+1",
+        companyTelephone: editData.companyTelephone ?? "",
+        payPercentage: editData.payPercentage ?? "",
+        contactName: editData.contactName ?? "",
+        trucks: editData.trucks ?? "",
+        truckCount: editData.truckCount ?? "",
+        autoRenewal: editData.autoRenewal ?? true,
       });
     } else {
       setForm(initialForm);
     }
-  }, [open, isEdit]);
+    setError("");
+  }, [open, isEdit, editData]);
+
   return (
     <Modal open={open} onClose={handleClose}>
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[9999]">
@@ -154,6 +234,36 @@ const ContractorModal = ({
           {/* Form */}
           <div className=" pb-4 mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6 max-h-[55dvh] overflow-y-auto md:px-5 px-3">
+              {/* Company Name + Primary Driver Name + Email — API ko required hain */}
+              <div className="md:col-span-2">
+                <CommonTextInput
+                  label="Company Name"
+                  value={form.companyName}
+                  onChange={(value) =>
+                    setForm((prev) => ({ ...prev, companyName: value }))
+                  }
+                  placeholder="Enter company name..."
+                />
+              </div>
+
+              <CommonTextInput
+                label="Primary Driver Name"
+                value={form.primaryDriverName}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, primaryDriverName: value }))
+                }
+                placeholder="Enter driver name..."
+              />
+
+              <CommonTextInput
+                label="Email"
+                value={form.email}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, email: value }))
+                }
+                placeholder="Enter email..."
+              />
+
               {/* Name */}
               <div className="md:col-span-2">
                 <CommonTextInput
@@ -226,11 +336,15 @@ const ContractorModal = ({
               {/* Upload */}
               <CommonFileUpload
                 label="Upload Contract"
-                onChange={(file) => console.log(file)}
+                onChange={(file) =>
+                  setForm((prev) => ({ ...prev, contractFile: file }))
+                }
               />
               <CommonFileUpload
                 label="Upload COI"
-                onChange={(file) => console.log(file)}
+                onChange={(file) =>
+                  setForm((prev) => ({ ...prev, coiFile: file }))
+                }
               />
 
               {/* USDOT + TxDOT */}
@@ -286,19 +400,6 @@ const ContractorModal = ({
               />
 
               {/* Address */}
-              {/* <div className="md:col-span-2">
-                <CommonTextInput
-                  label="Address"
-                  value={form.address}
-                  onChange={(value) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      address: value,
-                    }))
-                  }
-                  placeholder="Enter address..."
-                />
-              </div> */}
               <div className="md:col-span-2">
                 <label className="block text-sm xl:text-base mb-2">
                   Address
@@ -315,15 +416,6 @@ const ContractorModal = ({
                   className="w-full h-[100px] border-[0.85px] text-sm border-[#E5E7EB] rounded-[8px] p-2 md:p-4 resize-none outline-none"
                 />
               </div>
-
-              {/* Zip + Template */}
-              {/* <CommonTextInput
-                label="ZIP Code"
-                value={isEdit ? "08759" : ""}
-                placeholder="Enter zip..."
-              /> */}
-
-              {/* <CommonTextInput label="Template" placeholder="Enter..." /> */}
 
               {/* ID Type + ID */}
               <CommonSelectInput
@@ -379,19 +471,6 @@ const ContractorModal = ({
                     companyTelephone: value,
                   }))
                 }
-              />
-
-              {/* Email + Percentage */}
-              <CommonTextInput
-                label="Email"
-                value={form.email}
-                onChange={(value) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    email: value,
-                  }))
-                }
-                placeholder="Enter email..."
               />
 
               <CommonTextInput
@@ -474,6 +553,10 @@ const ContractorModal = ({
               </div>
             </div>
 
+            {error && (
+              <p className="px-5 mt-2 text-sm text-red-500 text-center">{error}</p>
+            )}
+
             {/* Footer */}
             <div className="border-t px-5 border-[#E5E7EB] mt-2 pt-3 flex justify-end flex-wrap gap-1 md:gap-2 xl:gap-4">
               <CommonButton
@@ -482,7 +565,7 @@ const ContractorModal = ({
                 className="sm:flex-1"
                 onClick={handleSubmit}
               >
-                {isEdit ? "Save" : "Add Contractor"}
+                {loading ? "Saving..." : isEdit ? "Save" : "Add Contractor"}
               </CommonButton>
 
               <CommonButton

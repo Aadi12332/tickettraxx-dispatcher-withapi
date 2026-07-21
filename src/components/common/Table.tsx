@@ -30,6 +30,13 @@ interface TableProps {
   onRowClick?: (item: any) => void;
   isCheckbox?: boolean;
   minWidth?: string;
+
+  currentPage?: number;
+  totalPages?: number;
+  totalItems?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  showPagination?: boolean;
 }
 
 const Table = ({
@@ -41,6 +48,13 @@ const Table = ({
   minWidth,
   onRowClick,
   isCheckbox = true,
+
+  currentPage = 1,
+  totalPages = 1,
+  totalItems = data.length,
+  pageSize = 10,
+  onPageChange = () => {},
+  showPagination = true,
 }: TableProps) => {
   const [sortConfig, setSortConfig] = useState<{
     key: string;
@@ -83,7 +97,9 @@ const Table = ({
   return (
     <div className="w-full bg-white">
       <div className="overflow-x-auto">
-        <table className={`w-full border-collapse border-spacing-0 font-archivo ${minWidth || "min-w-[900px]"}`}>
+        <table
+          className={`w-full border-collapse border-spacing-0 font-archivo ${minWidth || "min-w-[900px]"}`}
+        >
           <thead>
             <tr className="bg-[#F9FAFB] border border-[#E8E8E8]">
               {isCheckbox && (
@@ -148,15 +164,25 @@ const Table = ({
             </tr>
           </thead>
 
-          <tbody className=" border-x border-[#E8E8E8]">
-            {sortedData.map((item) => (
-              <tr
-                key={item.id}
-                onClick={() => onRowClick?.(item)}
-                className={`border-b border-[#E5E7EB] bg-white hover:border-gray-300 ${
-                  onRowClick ? "cursor-pointer" : ""
-                }`}
-              >
+<tbody className="border-x border-[#E8E8E8]">
+  {sortedData.length === 0 ? (
+    <tr>
+      <td
+        colSpan={columns.length + (isCheckbox ? 1 : 0)}
+        className="py-10 text-center text-sm text-[#707070] border border-[#E5E7EB]"
+      >
+        No data available
+      </td>
+    </tr>
+  ) : (
+    sortedData.map((item) => (
+      <tr
+        key={item.id}
+        onClick={() => onRowClick?.(item)}
+        className={`border-b border-[#E5E7EB] bg-white hover:border-gray-300 ${
+          onRowClick ? "cursor-pointer" : ""
+        }`}
+      >
                 {isCheckbox && (
                   <td className="w-[45px] py-3 text-center border border-[#E5E7EB]">
                     <Checkbox className="!p-0" size="small" />
@@ -172,8 +198,8 @@ const Table = ({
                     }}
                     className={`
                         px-2 py-3
-  border border-[#E5E7EB]
-  text-[11px] sm:text-xs xl:text-sm
+                        border border-[#E5E7EB]
+                        text-[11px] sm:text-xs xl:text-sm
                       ${column.textColor ?? "text-[#707070]"}
                       ${
                         column.key === "actions"
@@ -249,9 +275,7 @@ const Table = ({
                     ) : (
                       <div
                         className={
-                          column.key === "actions"
-                            ? ""
-                            : "overflow-hidden"
+                          column.key === "actions" ? "" : "overflow-hidden"
                         }
                       >
                         {item[column.key]}
@@ -259,19 +283,22 @@ const Table = ({
                     )}
                   </td>
                 ))}
-              </tr>
-            ))}
-          </tbody>
+                 </tr>
+    ))
+  )}
+</tbody>
         </table>
       </div>
 
-      <CommonPagination
-        currentPage={1}
-        totalPages={15}
-        totalItems={16}
-        pageSize={10}
-        onPageChange={() => {}}
-      />
+      {showPagination && totalItems > 0 && (
+        <CommonPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+        />
+      )}
       <CommonConfirmModal
         isOpen={showDeleteModal}
         onClose={() => {

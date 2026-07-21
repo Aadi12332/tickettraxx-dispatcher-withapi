@@ -178,7 +178,7 @@ const filteredPastJobs = pastJobsData.filter((job) => {
       {/* ── Back navigation ── */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1 text-sm text-[#374151] hover:text-[#233B73] transition-colors font-medium"
+        className="flex items-center gap-1 cursor-pointer text-sm text-[#374151] hover:text-[#233B73] transition-colors font-medium"
       >
         <ChevronLeft size={16} strokeWidth={2} />
         Contractors

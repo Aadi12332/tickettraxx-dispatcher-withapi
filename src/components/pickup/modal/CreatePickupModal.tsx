@@ -5,6 +5,8 @@ import CommonButton from "../../common/CommonButton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import { thirdPartyCustomerOptions, pickupCustomerOptions, pickupOptions, deliveryOptions } from "../../../utils/data";
+import type { Site } from "../../../types/auth.types";
+import { siteService } from "../../../services/auth.service";
 
 function MapClickHandler({ onMapClick }: { onMapClick: (e: any) => void }) {
   useMapEvents({
@@ -16,8 +18,6 @@ function MapClickHandler({ onMapClick }: { onMapClick: (e: any) => void }) {
   return null;
 }
 
-// Recenters the map whenever markerPos changes from a source other than a
-// direct map click (e.g. selecting a location from the dropdown).
 function MapRecenter({ position }: { position: [number, number] }) {
   const map = useMap();
 
@@ -32,6 +32,8 @@ interface CreatePickupModalProps {
   open: boolean;
   onClose: () => void;
   isEdit?: boolean;
+  editingSite?: Site | null;
+  onSuccess?: () => void;
 }
 
 const defaultMarkerPos: [number, number] = [49.102, -122.658];
@@ -41,42 +43,48 @@ const initialFormData = {
   location: "",
   customer: "",
   contractorRate: "",
+  invoiceRate: "",
   thirdPartyCustomer: "",
-};
-
-const editFormData = {
-  type: "Pickup",
-  location: "AMRIZE-Ambrose",
-  customer: "Kevin Mark",
-  contractorRate: "10.00",
-  thirdPartyCustomer: "Gilco Civil",
 };
 
 const CreatePickupModal = ({
   open,
   onClose,
   isEdit = false,
+  editingSite = null,
+  onSuccess,
 }: CreatePickupModalProps) => {
-  const [formData, setFormData] = useState(
-    isEdit ? editFormData : initialFormData
-  );
+  const [formData, setFormData] = useState(initialFormData);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const [markerPos, setMarkerPos] =
     useState<[number, number]>(defaultMarkerPos);
 
-  // Tracks whether the last location change came from a map click (in which
-  // case we already have lat/lng and shouldn't re-geocode) vs. a dropdown
-  // selection (in which case we need to look up coordinates for the label).
   const lastChangeFromMap = useRef(false);
   const geocodeRequestId = useRef(0);
 
+  // Populate the form from the site being edited, or reset for create mode.
   useEffect(() => {
     if (!open) return;
 
-    setFormData(isEdit ? editFormData : initialFormData);
+    if (isEdit && editingSite) {
+      setFormData({
+        type: editingSite.type === "pickup" ? "Pickup" : "Deliver",
+        location: editingSite.name,
+        customer: editingSite.customerId?._id || "",
+        contractorRate: String(editingSite.contractorRate ?? ""),
+        invoiceRate: String(editingSite.invoiceRate ?? ""),
+        thirdPartyCustomer: "",
+      });
+    } else {
+      setFormData(initialFormData);
+    }
+
     setMarkerPos(defaultMarkerPos);
     lastChangeFromMap.current = false;
-  }, [open, isEdit]);
+    setSubmitError("");
+  }, [open, isEdit, editingSite]);
 
   // Whenever the location value changes via the dropdown (not from a map
   // click), geocode the selected address text so the marker/map reflects it.
@@ -99,8 +107,6 @@ const CreatePickupModal = ({
 
         const data = await response.json();
 
-        // Ignore stale responses if the location changed again before this
-        // request resolved.
         if (requestId !== geocodeRequestId.current) return;
 
         const result = data?.[0];
@@ -109,8 +115,7 @@ const CreatePickupModal = ({
           setMarkerPos([parseFloat(result.lat), parseFloat(result.lon)]);
         }
       } catch {
-        // Geocoding failed — keep the marker at its current position rather
-        // than resetting it, so the form still usable.
+        // Geocoding failed — keep marker where it is
       }
     };
 
@@ -130,23 +135,55 @@ const CreatePickupModal = ({
     };
 
   const handleClose = () => {
+    setSubmitError("");
     onClose();
   };
 
-const isFormValid = useMemo(() => {
-  return (
-    formData.type.trim() !== "" &&
-    formData.location.trim() !== "" &&
-    formData.customer.trim() !== ""
-  );
-}, [formData]);
+  const isFormValid = useMemo(() => {
+    return (
+      formData.type.trim() !== "" &&
+      formData.location.trim() !== "" &&
+      formData.customer.trim() !== ""
+    );
+  }, [formData]);
 
-  const handleSubmit = () => {
+  // ---------- Create / Update site ----------
+  const handleSubmit = async () => {
     if (!isFormValid) return;
 
-    console.log(formData);
+    setSubmitting(true);
+    setSubmitError("");
 
-    handleClose();
+    const siteType = formData.type.toLowerCase() === "pickup" ? "pickup" : "deliver";
+
+    try {
+      if (isEdit && editingSite) {
+        await siteService.updateSite(editingSite._id, {
+          type: siteType,
+          name: formData.location,
+          customerId: formData.customer,
+          contractorRate: Number(formData.contractorRate) || undefined,
+          invoiceRate: Number(formData.invoiceRate) || undefined,
+        });
+      } else {
+        await siteService.createSite({
+          type: siteType,
+          name: formData.location,
+          customerId: formData.customer,
+          contractorRate: Number(formData.contractorRate) || 0,
+          invoiceRate: Number(formData.invoiceRate) || 0,
+        });
+      }
+
+      onSuccess?.();
+      handleClose();
+    } catch (err: unknown) {
+      setSubmitError(
+        err instanceof Error ? err.message : "Failed to save pickup/deliver.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleMapClick = async (e: any) => {
@@ -218,26 +255,19 @@ const isFormValid = useMemo(() => {
                 ]}
               />
 
-              {/* <CommonTextInput
-                label={`${formData.type || "Location"}`}
+              <CommonSelectInput
+                label={formData.type || "Location"}
                 value={formData.location}
-                placeholder="Enter"
+                placeholder="Select one..."
                 onChange={handleChange("location")}
-              /> */}
-
-<CommonSelectInput
-  label={formData.type || "Location"}
-  value={formData.location}
-  placeholder="Select one..."
-  onChange={handleChange("location")}
-  options={
-    formData.type?.toLowerCase() === "pickup"
-      ? pickupOptions
-      : deliveryOptions
-  }
-  addNewLabel="Add New"
-  onAddNew={() => {}}
-/>
+                options={
+                  formData.type?.toLowerCase() === "pickup"
+                    ? pickupOptions
+                    : deliveryOptions
+                }
+                addNewLabel="Add New"
+                onAddNew={() => {}}
+              />
 
               {formData.type && (
                 <>
@@ -261,36 +291,21 @@ const isFormValid = useMemo(() => {
 
                           <MapRecenter position={markerPos} />
 
-                          <MapClickHandler
-                            onMapClick={handleMapClick}
-                          />
+                          <MapClickHandler onMapClick={handleMapClick} />
                         </MapContainer>
                       </div>
-
-                      {/* <input
-                        value={formData.location}
-                        readOnly
-                        className="w-full h-[44px] px-4 outline-none text-sm"
-                      /> */}
                     </div>
                   </div>
-                  <CommonSelectInput
-  label="Contractor's Name"
-  value={formData.customer}
-  placeholder="Select one..."
-  onChange={handleChange("customer")}
-  options={pickupCustomerOptions}
-  addNewLabel="Add New"
-  onAddNew={() => {}}
-/>
 
-                  {/* <CommonTextInput
-                    label="Contractor Rate"
-                    placeholder="$0.00"
-                    value={formData.contractorRate}
-                    onChange={handleChange("contractorRate")}
-                    isAmount
-                  /> */}
+                  <CommonSelectInput
+                    label="Contractor's Name"
+                    value={formData.customer}
+                    placeholder="Select one..."
+                    onChange={handleChange("customer")}
+                    options={pickupCustomerOptions}
+                    addNewLabel="Add New"
+                    onAddNew={() => {}}
+                  />
 
                   <CommonSelectInput
                     label="Third Party Customer (if any)"
@@ -299,11 +314,15 @@ const isFormValid = useMemo(() => {
                     onChange={handleChange("thirdPartyCustomer")}
                     options={thirdPartyCustomerOptions}
                     addNewLabel="Add New"
-                    onAddNew={()=>{}}
+                    onAddNew={() => {}}
                   />
                 </>
               )}
             </div>
+
+            {submitError && (
+              <p className="mt-4 text-sm text-red-500">{submitError}</p>
+            )}
 
             {/* Footer */}
             <div className="border-t border-[#E5E7EB] mt-8 pt-5 flex justify-center flex-wrap gap-4">
@@ -312,14 +331,19 @@ const isFormValid = useMemo(() => {
                 variant="primary"
                 icon={!isEdit ? <Plus size={18} /> : undefined}
                 onClick={handleSubmit}
-                // disabled={!isFormValid}
                 className={`sm:flex-1 ${
-                  !isFormValid
+                  !isFormValid || submitting
                     ? "opacity-50 cursor-not-allowed"
                     : ""
                 }`}
               >
-                {isEdit ? "Save" : "Create Pickup/Deliver"}
+                {submitting
+                  ? isEdit
+                    ? "Saving..."
+                    : "Creating..."
+                  : isEdit
+                    ? "Save"
+                    : "Create Pickup/Deliver"}
               </CommonButton>
 
               <CommonButton

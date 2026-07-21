@@ -1,53 +1,88 @@
 import { Modal } from "@mui/material";
 import { X, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import axios from "axios";
 import CommonTextInput from "../../common/CommonTextInput";
 import CommonButton from "../../common/CommonButton";
-
-interface MaterialData {
-  id: number;
-  material: string;
-}
+import {
+  createMaterialApi,
+  updateMaterialApi,
+} from "../../../services/auth.service";
+import type { Material } from "../../../types/auth.types";
 
 interface CreateMaterialModalProps {
   open: boolean;
   onClose: () => void;
   isEdit?: boolean;
-  editData?: MaterialData | null;
+  editData?: Material | null;
+  // Create/update successful hone ke baad parent ko batane ke liye, taaki list refresh ho sake
+  onSuccess?: () => void;
 }
+
 const initialMaterial = "";
+
 const CreateMaterialModal = ({
   open,
   onClose,
   isEdit = false,
   editData,
+  onSuccess,
 }: CreateMaterialModalProps) => {
   const [materialName, setMaterialName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-useEffect(() => {
-  if (!open) return;
+  useEffect(() => {
+    if (!open) return;
 
-  if (isEdit && editData) {
-    setMaterialName(editData.material);
-  } else {
+    if (isEdit && editData) {
+      setMaterialName(editData.name);
+    } else {
+      setMaterialName(initialMaterial);
+    }
+    setError("");
+  }, [open, isEdit, editData]);
+
+  const handleClose = () => {
     setMaterialName(initialMaterial);
-  }
-}, [open, isEdit, editData]);
-
-const handleClose = () => {
-  setMaterialName(initialMaterial);
-  onClose();
-};
-
-  const handleSubmit = () => {
-    console.log({
-      materialName,
-    });
-
-    handleClose();
+    setError("");
+    onClose();
   };
 
-  const isDisabled = materialName.trim() === "";
+  const handleSubmit = async () => {
+    setError("");
+
+    if (!materialName.trim()) return;
+
+    setLoading(true);
+    try {
+      if (isEdit && editData) {
+        await updateMaterialApi(editData._id, {
+          name: materialName.trim(),
+        });
+      } else {
+        await createMaterialApi({
+          name: materialName.trim(),
+        });
+      }
+
+      onSuccess?.();
+      handleClose();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.message ||
+            "Something went wrong. Please try again.",
+        );
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isDisabled = materialName.trim() === "" || loading;
 
   return (
     <Modal open={open} onClose={handleClose}>
@@ -82,6 +117,10 @@ const handleClose = () => {
               />
             </div>
 
+            {error && (
+              <p className="mt-4 text-sm text-red-500 text-center">{error}</p>
+            )}
+
             {/* Footer */}
             <div className="border-t border-[#E5E7EB] mt-8 pt-5 flex justify-center flex-wrap gap-4">
               <CommonButton
@@ -93,7 +132,7 @@ const handleClose = () => {
                   isDisabled ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
-                {isEdit ? "Save" : "Create Material"}
+                {loading ? "Saving..." : isEdit ? "Save" : "Create Material"}
               </CommonButton>
 
               <CommonButton

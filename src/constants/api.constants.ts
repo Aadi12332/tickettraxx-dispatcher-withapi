@@ -22,7 +22,38 @@ export const NOTIFICATION_ENDPOINTS = {
   MARK_ALL_READ: "/notifications/read-all",
 } as const;
 
+export const MATERIAL_ENDPOINTS = {
+  MATERIALS: "/materials",
+  MATERIAL_BY_ID: (id: string) => `/materials/${id}`,
+} as const;
+
 export const DISPATCH_ENDPOINTS = {
   GET_DISPATCHES: "/dispatches",
   EXPORT_DISPATCH: (id: string) => `/dispatches/${id}/export`,
+} as const;
+
+export const FSC_ENDPOINTS = {
+  FSC: "/fsc",
+  FSC_BY_ID: (id: string) => `/fsc/${id}`,
+} as const;
+ 
+export const CUSTOMER_ENDPOINTS = {
+  CUSTOMERS: "/customers",
+} as const;
+
+export const API_CONSTANTS = {
+  SITES: {
+    BASE: "/sites",
+    BY_ID: (id: string) => `/sites/${id}`,
+  },
+};
+
+export const CONTRACTOR_ENDPOINTS = {
+  CONTRACTORS: "/contractors",
+  CONTRACTOR_BY_ID: (id: string) => `/contractors/${id}`,
+} as const;
+ 
+export const JOB_ENDPOINTS = {
+  JOBS: "/jobs",
+  JOB_BY_ID: (id: string) => `/jobs/${id}`,
 } as const;

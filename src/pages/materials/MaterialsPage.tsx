@@ -1,5 +1,6 @@
-import { useState } from "react";
-import {PlusCircle, RefreshCcw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { PlusCircle, RefreshCcw } from "lucide-react";
+import axios from "axios";
 import PageHeader from "../../components/common/PageHeader";
 import TableFilters from "../../components/common/TableFilters";
 import Table from "../../components/common/Table";
@@ -7,24 +8,19 @@ import CommonButton from "../../components/common/CommonButton";
 import CreateMaterialModal from "../../components/materials/modal/CreateMaterialModal";
 import LoadUpdateSuccessModal from "../../components/common/modal/LoadUpdateSuccessModal";
 import ExportButton from "../../components/common/ExportButton";
+import {
+  getMaterialsApi,
+  deleteMaterialApi,
+} from "../../services/auth.service";
+import type { Material } from "../../types/auth.types";
+
 const materialColumns = [
   { label: "#", key: "id" },
   { label: "Materials", key: "material" },
   { label: "Details", key: "actions" },
 ];
 
-const materialData = [
-  { id: 1, material: "1' Rock" },
-  { id: 2, material: "Manufactured Sand (Man Sand)" },
-  { id: 3, material: "Concrete Sand" },
-  { id: 4, material: "TX126 – 1” to #4 Crushed Stone" },
-  { id: 5, material: "TX197 – TXDOT Type A Grade 1-2" },
-  { id: 6, material: "TX157 – ¾” to #4 Crushed Stone" },
-  { id: 7, material: "TX373-Washed Concrete Sand" },
-  { id: 8, material: "Flex Base" },
-  { id: 9, material: "TX121 – 1-1/2” Crushed Stone" },
-  { id: 10, material: "TX180 – Crushed Stone" },
-];
+type MaterialRow = Material & { id: string; material: string };
 
 const MaterialsPage = () => {
   const [openModal, setOpenModal] = useState(false);
@@ -32,32 +28,88 @@ const MaterialsPage = () => {
   const [search, setSearch] = useState("");
   const [entries, setEntries] = useState(10);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-const [selectedMaterial, setSelectedMaterial] = useState<
-  (typeof materialData)[0] | null
->(null);
+  const [successTitle, setSuccessTitle] = useState("");
+  const [selectedMaterial, setSelectedMaterial] = useState<MaterialRow | null>(
+    null,
+  );
 
-  const handleUpdate = () => {
-    setShowSuccessModal(true);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1,
+  });
 
-    setTimeout(() => {
-      setShowSuccessModal(false);
-    }, 3000);
+  const fetchMaterials = async (pageNum = pagination.page, limit = entries) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await getMaterialsApi(pageNum, limit);
+
+      setMaterials(res.data);
+      setPagination(res.pagination);
+    } catch {
+      setError("Unable to load materials. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
-  const filteredMaterials = materialData
-    .filter((item) => {
-      if (!search) return true;
 
-      return (
-        item.material.toLowerCase().includes(search.toLowerCase()) ||
-        item.id.toString().includes(search)
-      );
-    })
-    .slice(0, entries);
+  useEffect(() => {
+    fetchMaterials(pagination.page, entries);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, entries]);
+
+  const handleRefresh = () => {
+    fetchMaterials(pagination.page, entries);
+  };
+
+  const handleCreateSuccess = () => {
+    setSuccessTitle("You have successfully created the material.");
+    setShowSuccessModal(true);
+    fetchMaterials(pagination.page, entries);
+    setTimeout(() => setShowSuccessModal(false), 3000);
+  };
+
+  const handleUpdateSuccess = () => {
+    setSuccessTitle("You have successfully updated the material.");
+    setShowSuccessModal(true);
+    fetchMaterials(pagination.page, entries);
+    setTimeout(() => setShowSuccessModal(false), 3000);
+  };
+
+  const handleDelete = async (item: MaterialRow) => {
+    try {
+      await deleteMaterialApi(item._id);
+      fetchMaterials(pagination.page, entries);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Unable to delete material.");
+      } else {
+        setError("Unable to delete material.");
+      }
+    }
+  };
+
+  const rows = materials.map((material, index) => ({
+    ...material,
+    id: (pagination.page - 1) * pagination.limit + index + 1,
+    material: material.name,
+  }));
+
+  const filteredMaterials = rows.filter((item) => {
+    if (!search) return true;
+    return item.material.toLowerCase().includes(search.toLowerCase());
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Materials"
-        description="Lorem Ipsum is simply dummy text of the printing and typesetting industry."
+        description="Lorem Ipsum is simply dummy text of the printing and typesetting industry."
       >
         <div className="flex flex-wrap items-center lg:gap-3 gap-1 ml-auto">
           <CommonButton
@@ -81,47 +133,73 @@ const [selectedMaterial, setSelectedMaterial] = useState<
             variant="secondary"
             iconOnly
             icon={<RefreshCcw size={18} />}
-            onClick={handleUpdate}
+            onClick={handleRefresh}
           />
         </div>
       </PageHeader>
+
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
       <div className=" bg-white">
         <TableFilters
           searchValue={search}
           onSearchChange={setSearch}
           entries={entries}
-          onEntriesChange={setEntries}
+          onEntriesChange={(val) => {
+            setEntries(val);
+
+            setPagination((prev) => ({
+              ...prev,
+              page: 1,
+            }));
+          }}
         />
-        <Table
-  columns={materialColumns}
-  data={filteredMaterials}
-  onEdit={(item) => {
-    setSelectedMaterial(item);
-    setOpenEditMaterial(true);
-  }}
-  onDelete={(item) => console.log("Delete Material:", item)}
-  minWidth="min-w-[500px]"
-/>
+        {loading ? (
+          <p className="text-sm text-[#979797] py-6 text-center">
+            Loading materials...
+          </p>
+        ) : (
+          <Table
+            columns={materialColumns}
+            data={filteredMaterials}
+            currentPage={pagination.page}
+            totalPages={pagination.pages}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+            onPageChange={(page) => {
+              fetchMaterials(page, pagination.limit);
+            }}
+            onEdit={(item) => {
+              setSelectedMaterial(item as MaterialRow);
+              setOpenEditMaterial(true);
+            }}
+            onDelete={(item) => handleDelete(item as MaterialRow)}
+            minWidth="min-w-[500px]"
+          />
+        )}
       </div>
 
       <CreateMaterialModal
         open={openModal}
         onClose={() => setOpenModal(false)}
+        onSuccess={handleCreateSuccess}
       />
 
-   <CreateMaterialModal
-  open={openEditMaterial}
-  onClose={() => {
-    setOpenEditMaterial(false);
-    setSelectedMaterial(null);
-  }}
-  isEdit
-  editData={selectedMaterial}
-/>
+      <CreateMaterialModal
+        open={openEditMaterial}
+        onClose={() => {
+          setOpenEditMaterial(false);
+          setSelectedMaterial(null);
+        }}
+        isEdit
+        editData={selectedMaterial}
+        onSuccess={handleUpdateSuccess}
+      />
+
       <LoadUpdateSuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
-        title="You have successfully loaded the materials."
+        title={successTitle}
       />
     </div>
   );
