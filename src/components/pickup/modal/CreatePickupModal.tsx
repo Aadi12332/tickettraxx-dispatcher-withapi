@@ -3,10 +3,25 @@ import { X, Plus } from "lucide-react";
 import CommonSelectInput from "../../common/CommonSelectInput";
 import CommonButton from "../../common/CommonButton";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
-import { thirdPartyCustomerOptions, pickupCustomerOptions, pickupOptions, deliveryOptions } from "../../../utils/data";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import {
+  thirdPartyCustomerOptions,
+  pickupOptions,
+  deliveryOptions,
+} from "../../../utils/data";
 import type { Site } from "../../../types/auth.types";
-import { siteService } from "../../../services/auth.service";
+import { siteService, getContractorsApi } from "../../../services/auth.service";
+
+interface OptionType {
+  label: string;
+  value: string;
+}
 
 function MapClickHandler({ onMapClick }: { onMapClick: (e: any) => void }) {
   useMapEvents({
@@ -57,14 +72,35 @@ const CreatePickupModal = ({
   const [formData, setFormData] = useState(initialFormData);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-
+  const [newThirdPartyCustomer, setNewThirdPartyCustomer] = useState("");
+  const [contractorOptions, setContractorOptions] = useState<OptionType[]>([]);
   const [markerPos, setMarkerPos] =
     useState<[number, number]>(defaultMarkerPos);
 
   const lastChangeFromMap = useRef(false);
   const geocodeRequestId = useRef(0);
 
-  // Populate the form from the site being edited, or reset for create mode.
+  const loadContractors = async () => {
+  try {
+    const res = await getContractorsApi(1, 100);
+
+    setContractorOptions(
+      res.data.map((contractor) => ({
+        label: contractor.companyName,
+        value: contractor._id,
+      }))
+    );
+  } catch (err) {
+    console.error("Failed to load contractors", err);
+  }
+};
+
+useEffect(() => {
+  if (open) {
+    loadContractors();
+  }
+}, [open]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -122,17 +158,16 @@ const CreatePickupModal = ({
     void geocodeLocation();
   }, [formData.location]);
 
-  const handleChange =
-    (field: keyof typeof formData) => (value: string) => {
-      if (field === "location") {
-        lastChangeFromMap.current = false;
-      }
+  const handleChange = (field: keyof typeof formData) => (value: string) => {
+    if (field === "location") {
+      lastChangeFromMap.current = false;
+    }
 
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    };
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   const handleClose = () => {
     setSubmitError("");
@@ -147,14 +182,14 @@ const CreatePickupModal = ({
     );
   }, [formData]);
 
-  // ---------- Create / Update site ----------
   const handleSubmit = async () => {
     if (!isFormValid) return;
 
     setSubmitting(true);
     setSubmitError("");
 
-    const siteType = formData.type.toLowerCase() === "pickup" ? "pickup" : "deliver";
+    const siteType =
+      formData.type.toLowerCase() === "pickup" ? "pickup" : "deliver";
 
     try {
       if (isEdit && editingSite) {
@@ -194,7 +229,7 @@ const CreatePickupModal = ({
 
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
       );
 
       const data = await response.json();
@@ -225,8 +260,8 @@ const CreatePickupModal = ({
               </h2>
 
               <p className="mt-3 text-sm text-[#717182]">
-                Lorem Ipsum is simply dummy text of the printing and
-                typesetting industry.
+                Lorem Ipsum is simply dummy text of the printing and typesetting
+                industry.
               </p>
             </div>
 
@@ -298,23 +333,31 @@ const CreatePickupModal = ({
                   </div>
 
                   <CommonSelectInput
-                    label="Contractor's Name"
-                    value={formData.customer}
-                    placeholder="Select one..."
-                    onChange={handleChange("customer")}
-                    options={pickupCustomerOptions}
-                    addNewLabel="Add New"
-                    onAddNew={() => {}}
-                  />
+  label="Contractor's Name"
+  value={formData.customer}
+  placeholder="Select one..."
+  onChange={handleChange("customer")}
+  options={contractorOptions}
+/>
 
                   <CommonSelectInput
                     label="Third Party Customer (if any)"
                     value={formData.thirdPartyCustomer}
                     placeholder="Select one..."
-                    onChange={handleChange("thirdPartyCustomer")}
+                    onChange={(value) => {
+                      setNewThirdPartyCustomer("");
+                      handleChange("thirdPartyCustomer")(value);
+                    }}
                     options={thirdPartyCustomerOptions}
                     addNewLabel="Add New"
-                    onAddNew={() => {}}
+                    onAddNew={(value) => {
+                      setNewThirdPartyCustomer(value);
+
+                      setFormData((prev) => ({
+                        ...prev,
+                        thirdPartyCustomer: value,
+                      }));
+                    }}
                   />
                 </>
               )}

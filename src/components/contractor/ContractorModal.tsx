@@ -12,8 +12,9 @@ import axios from "axios";
 import {
   createContractorApi,
   updateContractorApi,
+  uploadContractorFilesApi,
 } from "../../services/auth.service";
-import type { Contractor } from "../../types/auth.types";
+import type { Contractor, ContractorPayload } from "../../types/auth.types";
 
 interface ContractorModalProps {
   open: boolean;
@@ -71,7 +72,8 @@ const initialForm = {
   primaryDriverName: "",
   unitNumber: "",
   email: "",
-
+  contractPreview: "",
+  coiPreview: "",
   zipCode: "",
   state: "",
   city: "",
@@ -79,22 +81,23 @@ const initialForm = {
 
   usdot: "",
   txdot: "",
+  ownerOperatorOrFleet: "",
+  payPercent: "",
+  trucks: "",
+  truckCount: "",
 
   signatureDate: "",
   expirationDate: "",
   address: "",
-
+  contractFileName: "",
+  coiFileName: "",
   idType: "",
   id: "",
-  ownerOperatorFleet: "",
   phoneCode: "+1",
-  companyTelephone: "",
-  payPercentage: "",
+  phone: "",
   contactName: "",
   unit: "",
-  trucks: "",
-  autoRenewal: true,
-  truckCount: "",
+  autoSendRenewalReminders: true,
   contractFile: null as File | null,
   coiFile: null as File | null,
 };
@@ -120,51 +123,72 @@ const ContractorModal = ({
   const handleSubmit = async () => {
     setError("");
 
-    if (!form.companyName.trim() || !form.primaryDriverName.trim() || !form.email.trim()) {
+    if (
+      !form.companyName.trim() ||
+      !form.primaryDriverName.trim() ||
+      !form.email.trim()
+    ) {
       setError("Please fill company name, driver name and email");
       return;
     }
 
-    // Files JSON body me nahi bheji ja sakti (multipart upload chahiye), baaki sab fields bhej rahe hain
-    const payload = {
+    const rawPayload = {
       companyName: form.companyName.trim(),
       primaryDriverName: form.primaryDriverName.trim(),
       unitNumber: form.unit,
+      phone: form.phone,
       email: form.email.trim(),
       parkingLocation: form.parkingLocation,
       zipCode: form.zipCode,
       state: form.state,
       city: form.city,
-      usdot: form.usdot,
-      txdot: form.txdot,
       signatureDate: form.signatureDate,
       expirationDate: form.expirationDate,
       address: form.address,
       idType: form.idType,
       idNumber: form.id,
-      ownerOperatorFleet: form.ownerOperatorFleet,
-      phoneCode: form.phoneCode,
-      companyTelephone: form.companyTelephone,
-      payPercentage: form.payPercentage,
       contactName: form.contactName,
-      trucks: form.trucks,
-      truckCount: form.truckCount,
-      autoRenewal: form.autoRenewal,
+      autoSendRenewalReminders: form.autoSendRenewalReminders,
+      usdotNumber: form.usdot,
+      txdotNumber: form.txdot,
+      ownerOperatorOrFleet: form.ownerOperatorOrFleet,
+      payPercent: form.payPercent.replace("%", ""),
+      truckCount: form.trucks === "single" ? "1" : form.truckCount,
+      phoneCode: form.phoneCode,
     };
+
+    const formData = new FormData();
+
+    Object.entries(rawPayload).forEach(([key, value]) => {
+      if (value !== "" && value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+
+    if (form.contractFile) {
+      formData.append("contract", form.contractFile);
+    }
+
+    if (form.coiFile) {
+      formData.append("coi", form.coiFile);
+    }
 
     setLoading(true);
     try {
       if (isEdit && editData) {
-        await updateContractorApi(editData._id, payload);
+        await uploadContractorFilesApi(editData._id, formData);
       } else {
-        await createContractorApi(payload);
+        await createContractorApi(formData);
       }
 
       onSuccess?.();
       handleClose();
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || "Something went wrong. Please try again.");
+        setError(
+          err.response?.data?.message ||
+            "Something went wrong. Please try again.",
+        );
       } else {
         setError("Something went wrong. Please try again.");
       }
@@ -187,27 +211,46 @@ const ContractorModal = ({
         state: editData.state ?? "",
         city: editData.city ?? "",
         parkingLocation: editData.parkingLocation ?? "",
-        usdot: editData.usdot ?? "",
-        txdot: editData.txdot ?? "",
-        signatureDate: editData.signatureDate ?? "",
-        expirationDate: editData.expirationDate ?? "",
+        // signatureDate/expirationDate ISO datetime string me aate hain ("2026-07-01T00:00:00.000Z"),
+        // date input ko sirf "YYYY-MM-DD" chahiye
+        signatureDate: editData.signatureDate
+          ? editData.signatureDate.slice(0, 10)
+          : "",
+        expirationDate: editData.expirationDate
+          ? editData.expirationDate.slice(0, 10)
+          : "",
         address: editData.address ?? "",
         idType: editData.idType ?? "",
         id: editData.idNumber ?? "",
-        ownerOperatorFleet: editData.ownerOperatorFleet ?? "",
-        phoneCode: editData.phoneCode ?? "+1",
-        companyTelephone: editData.companyTelephone ?? "",
-        payPercentage: editData.payPercentage ?? "",
+        phone: editData.phone ?? "",
         contactName: editData.contactName ?? "",
-        trucks: editData.trucks ?? "",
-        truckCount: editData.truckCount ?? "",
-        autoRenewal: editData.autoRenewal ?? true,
+        autoSendRenewalReminders: editData.autoSendRenewalReminders ?? true,
+        usdot: editData.usdotNumber ?? "",
+        txdot: editData.txdotNumber ?? "",
+        ownerOperatorOrFleet: editData.ownerOperatorOrFleet ?? "",
+        payPercent: editData.payPercent ?? "",
+        contractFileName: editData.contractDocument?.url ?? "",
+        coiFileName: editData.coiDocument?.url ?? "",
+
+        contractPreview: editData.contractDocument?.url ?? "",
+        coiPreview: editData.coiDocument?.url ?? "",
+        trucks: Number(editData.truckCount) > 1 ? "multiple" : "single",
+
+        truckCount: editData.truckCount ? String(editData.truckCount) : "",
+        phoneCode: editData.phoneCode ?? "+1",
       });
     } else {
       setForm(initialForm);
     }
     setError("");
   }, [open, isEdit, editData]);
+
+  const allowedTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/jpg",
+  ];
 
   return (
     <Modal open={open} onClose={handleClose}>
@@ -221,8 +264,9 @@ const ContractorModal = ({
               </h2>
 
               <p className="mt-3 text-sm text-[#717182]">
-                Lorem Ipsum is simply dummy text of the printing and typesetting
-                industry.
+                {isEdit && editData?.contractorCode
+                  ? `Contractor Code: ${editData.contractorCode}`
+                  : "Lorem Ipsum is simply dummy text of the printing and typesetting industry."}
               </p>
             </div>
 
@@ -333,19 +377,84 @@ const ContractorModal = ({
                   options={parkingLocationOptions}
                 />
               </div>
-              {/* Upload */}
-              <CommonFileUpload
-                label="Upload Contract"
-                onChange={(file) =>
-                  setForm((prev) => ({ ...prev, contractFile: file }))
-                }
-              />
-              <CommonFileUpload
-                label="Upload COI"
-                onChange={(file) =>
-                  setForm((prev) => ({ ...prev, coiFile: file }))
-                }
-              />
+
+              <div>
+                <CommonFileUpload
+                  label="Upload Contract"
+                  onChange={(file) => {
+                    if (!file) return;
+
+                    if (!allowedTypes.includes(file.type)) {
+                      setError(
+                        "Only PDF, JPG, JPEG and PNG files are allowed.",
+                      );
+                      return;
+                    }
+
+                    setForm((prev) => ({
+                      ...prev,
+                      contractFile: file,
+                      contractPreview: URL.createObjectURL(file),
+                    }));
+                  }}
+                />
+
+                {form.contractPreview && (
+  <div className="mt-2">
+    {form.contractPreview.toLowerCase().endsWith(".pdf") ? (
+      <iframe
+        src={form.contractPreview}
+        className="w-full h-[100px] rounded border"
+      />
+    ) : (
+      <img
+        src={form.contractPreview}
+        alt="Contract"
+        className="w-full h-[150px] object-cover rounded-lg border"
+      />
+    )}
+  </div>
+)}
+              </div>
+
+              <div>
+                <CommonFileUpload
+                  label="Upload COI"
+                  onChange={(file) => {
+                    if (!file) return;
+
+                    if (!allowedTypes.includes(file.type)) {
+                      setError(
+                        "Only PDF, JPG, JPEG and PNG files are allowed.",
+                      );
+                      return;
+                    }
+
+                    setForm((prev) => ({
+                      ...prev,
+                      coiFile: file,
+                      coiPreview: URL.createObjectURL(file),
+                    }));
+                  }}
+                />
+
+               {form.coiPreview && (
+  <div className="mt-2">
+    {form.coiPreview.toLowerCase().endsWith(".pdf") ? (
+      <iframe
+        src={form.coiPreview}
+        className="w-full h-[100px] rounded border"
+      />
+    ) : (
+      <img
+        src={form.coiPreview}
+        alt="COI"
+        className="w-full h-[150px] object-cover rounded-lg border"
+      />
+    )}
+  </div>
+)}
+              </div>
 
               {/* USDOT + TxDOT */}
               <CommonTextInput
@@ -443,13 +552,13 @@ const ContractorModal = ({
                 }
               />
 
-              {/* Company */}
+              {/* Owner Operator / Fleet */}
               <CommonTextInput
-                value={form.ownerOperatorFleet}
+                value={form.ownerOperatorOrFleet}
                 onChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
-                    ownerOperatorFleet: value,
+                    ownerOperatorOrFleet: value,
                   }))
                 }
                 label="Owner Operator or Fleet"
@@ -458,7 +567,7 @@ const ContractorModal = ({
               <CommonPhoneInput
                 label="Company Telephone"
                 countryCode={form.phoneCode}
-                phone={form.companyTelephone}
+                phone={form.phone}
                 onCountryChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
@@ -468,18 +577,19 @@ const ContractorModal = ({
                 onPhoneChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
-                    companyTelephone: value,
+                    phone: value,
                   }))
                 }
               />
 
+              {/* Pay Percentage */}
               <CommonTextInput
                 label="Pay Percentage of Load"
-                value={form.payPercentage}
+                value={form.payPercent}
                 onChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
-                    payPercentage: value,
+                    payPercent: value,
                   }))
                 }
                 placeholder="Enter percentage..."
@@ -542,11 +652,11 @@ const ContractorModal = ({
                 </label>
 
                 <IOSSwitch
-                  checked={form.autoRenewal}
+                  checked={form.autoSendRenewalReminders}
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      autoRenewal: e.target.checked,
+                      autoSendRenewalReminders: e.target.checked,
                     }))
                   }
                 />
@@ -554,7 +664,9 @@ const ContractorModal = ({
             </div>
 
             {error && (
-              <p className="px-5 mt-2 text-sm text-red-500 text-center">{error}</p>
+              <p className="px-5 mt-2 text-sm text-red-500 text-center">
+                {error}
+              </p>
             )}
 
             {/* Footer */}

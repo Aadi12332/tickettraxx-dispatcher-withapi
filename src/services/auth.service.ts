@@ -179,6 +179,14 @@ export const getCustomersApi = async (
   return data;
 };
 
+export const createCustomerApi = async (name: string) => {
+  const { data } = await axiosInstance.post("/customers", {
+    name,
+  });
+
+  return data;
+};
+
 export const getFscApi = async (
   page = 1,
   limit = 20,
@@ -264,23 +272,37 @@ export const getContractorsApi = async (
 };
  
 export const createContractorApi = async (
-  payload: ContractorPayload
-): Promise<ContractorResponse> => {
-  const { data } = await axiosInstance.post<ContractorResponse>(
+  payload: FormData
+) => {
+  const { data } = await axiosInstance.post(
     CONTRACTOR_ENDPOINTS.CONTRACTORS,
     payload
   );
+
+  return data;
+};
+
+export const updateContractorApi = async (
+  id: string,
+  payload: ContractorPayload | { status: string }
+) => {
+  const { data } = await axiosInstance.patch(
+    `${CONTRACTOR_ENDPOINTS.CONTRACTORS}/${id}`,
+    payload
+  );
+
   return data;
 };
  
-export const updateContractorApi = async (
+export const uploadContractorFilesApi = async (
   id: string,
-  payload: Partial<ContractorPayload>
-): Promise<ContractorResponse> => {
-  const { data } = await axiosInstance.patch<ContractorResponse>(
-    CONTRACTOR_ENDPOINTS.CONTRACTOR_BY_ID(id),
-    payload
+  formData: FormData
+) => {
+  const { data } = await axiosInstance.patch(
+    `${CONTRACTOR_ENDPOINTS.CONTRACTORS}/${id}`,
+    formData
   );
+
   return data;
 };
  

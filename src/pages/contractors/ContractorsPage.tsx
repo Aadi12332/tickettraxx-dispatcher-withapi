@@ -33,11 +33,9 @@ export const columns = [
   { label: "Phone", key: "phone" },
   { label: "Email", key: "email" },
   { label: "Status", key: "status" },
-  { label: "Details", key: "actions" },
+  { label: "Details", key: "actions", minWidth: "100px" },
 ];
 
-// Table row shape ke saath compatible rehne ke liye Contractor ko map karte hain,
-// lekin _id jaisa original field bhi rakhte hain taaki edit/delete/status-toggle easily ho sake
 type ContractorRow = Contractor & {
   id: string;
   driverName: string;
@@ -51,7 +49,7 @@ const mapContractorToRow = (item: Contractor): ContractorRow => ({
   id: item._id,
   driverName: item.primaryDriverName,
   contractor: item.companyName,
-  phone: item.companyTelephone || "-",
+  phone: item.phone || "-",
   status: item.status === "active" ? "Active" : "Inactive",
 });
 
@@ -223,6 +221,7 @@ const ContractorsPage = () => {
     }
   };
 
+  // Static hai kyunki abhi koi stats API nahi di gayi hai
   const statsData = [
     {
       title: "Total Contractors",
@@ -279,12 +278,14 @@ const ContractorsPage = () => {
           >
             Add Contractor
           </CommonButton>
+          {/* Export */}
           <ExportButton
             onClick={() => {
               console.log("Export started...");
             }}
           />
 
+          {/* Refresh */}
           <CommonButton
             size="sm"
             variant="secondary"

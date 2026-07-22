@@ -30,7 +30,6 @@ interface TableProps {
   onRowClick?: (item: any) => void;
   isCheckbox?: boolean;
   minWidth?: string;
-
   currentPage?: number;
   totalPages?: number;
   totalItems?: number;
@@ -48,7 +47,6 @@ const Table = ({
   minWidth,
   onRowClick,
   isCheckbox = true,
-
   currentPage = 1,
   totalPages = 1,
   totalItems = data.length,
@@ -118,7 +116,7 @@ const Table = ({
                   className={`
                      px-2 py-3
   border border-[#E5E7EB]
-  text-xs xl:text-sm font-medium text-[#1F2937]
+  text-sm font-medium text-[#1F2937]
                     ${
                       column.key === "actions"
                         ? "text-left px-2"
@@ -199,7 +197,7 @@ const Table = ({
                     className={`
                         px-2 py-3
                         border border-[#E5E7EB]
-                        text-[11px] sm:text-xs xl:text-sm
+                        text-sm
                       ${column.textColor ?? "text-[#707070]"}
                       ${
                         column.key === "actions"

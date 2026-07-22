@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Search, PlusCircle, RefreshCcw } from "lucide-react";
 
 import PageHeader from "../../components/common/PageHeader";
@@ -8,117 +8,32 @@ import CommonButton from "../../components/common/CommonButton";
 import LoadUpdateSuccessModal from "../../components/common/modal/LoadUpdateSuccessModal";
 import CreatePickupModal from "../../components/pickup/modal/CreatePickupModal";
 import ExportButton from "../../components/common/ExportButton";
+import {
+  getJobsApi,
+  deleteJobApi,
+  siteService,
+} from "../../services/auth.service";
+import type { Job, Site } from "../../types/auth.types";
 
-const poCodeData = [
-  {
-    code: "5500016751",
-    date: "22/04/2025",
-    pickup: "AMRIZE-Melissa",
-    deliver: "Plano-4950",
-    material: "Rock",
-    customer: "AMRIZE",
-    thirdPartyCustomer: "GILCO CIVIL",
-    rate: "$14.00",
-  },
-  {
-    code: "5500016751",
-    date: "22/04/2025",
-    pickup: "HBERG-Bridgeport",
-    deliver: "Plano-4951",
-    material: "Sand",
-    customer: "AMRIZE",
-    thirdPartyCustomer: "GILCO CIVIL",
-    rate: "$5.25",
-  },
-  {
-    code: "5500016751",
-    date: "22/04/2025",
-    pickup: "HBERG-LakeBP",
-    deliver: "Plano-4952",
-    material: "Concrete",
-    customer: "AMRIZE",
-    thirdPartyCustomer: "GILCO CIVIL",
-    rate: "$10.25",
-  },
-  {
-    code: "5500016752",
-    date: "22/04/2025",
-    pickup: "AMRIZE-Ambrose",
-    deliver: "4954 Blue Mound",
-    material: "Limestone",
-    customer: "HEIDELBERG MATERIALS",
-    thirdPartyCustomer: "MCCARTHY VAUGHN PARTNERSHIP",
-    rate: "$14.00",
-  },
-  {
-    code: "5500016753",
-    date: "22/04/2025",
-    pickup: "HBERG-Bridgeport",
-    deliver: "4955 Dallas Bickham",
-    material: "Limestone",
-    customer: "HEIDELBERG MATERIALS",
-    thirdPartyCustomer: "MCCARTHY VAUGHN PARTNERSHIP",
-    rate: "$14.00",
-  },
-  {
-    code: "5500016754",
-    date: "22/04/2025",
-    pickup: "AMRIZE-Ambrose",
-    deliver: "4958 McKinney",
-    material: "River Gravel",
-    customer: "RAVENNA-1",
-    thirdPartyCustomer: "RPM xConstruction, LLC",
-    rate: "$14.00",
-  },
-  {
-    code: "5500016755",
-    date: "22/04/2025",
-    pickup: "Ravenna - Resolve Aggregates",
-    deliver: "4955 Dallas Bickham",
-    material: "Clay Soil",
-    customer: "RAVENNA-2",
-    thirdPartyCustomer: "RPM xConstruction, LLC",
-    rate: "$14.00",
-  },
-  {
-    code: "5500016756",
-    date: "22/04/2025",
-    pickup: "Ravenna - Resolve Aggregates",
-    deliver: "4252 Hemphill",
-    material: "Pea Gravel",
-    customer: "MARTIN MARIETTA",
-    thirdPartyCustomer: "----",
-    rate: "$14.00",
-  },
-  {
-    code: "5500016757",
-    date: "22/04/2025",
-    pickup: "AMRIZE-Melissa",
-    deliver: "4954 Blue Mound",
-    material: "Sandstone",
-    customer: "RPM xConstruction",
-    thirdPartyCustomer: "Jordyn Baptista",
-    rate: "$14.00",
-  },
-  {
-    code: "5500016758",
-    date: "22/04/2025",
-    pickup: "AMRIZE-Melissa",
-    deliver: "4951 Denton",
-    material: "Basalt Rock",
-    customer: "RPM xConstruction",
-    thirdPartyCustomer: "Nolan Septimus",
-    rate: "$14.00",
-  },
-];
+interface POCodeRow {
+  id: string;
+  code: string;
+  date: string;
+  pickup: string;
+  deliver: string;
+  material: string;
+  customer: string;
+  thirdPartyCustomer: string;
+  rate: string;
+}
 
 const columns = [
   { label: "Code", key: "code" },
   { label: "Date", key: "date" },
-  { label: "Pickup", key: "pickup", width: "130px", },
-  { label: "Deliver", key: "deliver", width: "130px", },
+  { label: "Pickup", key: "pickup", width: "130px" },
+  { label: "Deliver", key: "deliver", width: "130px" },
   { label: "Material", key: "material" },
-  { label: "Customer", key: "customer", width: "120px", },
+  { label: "Customer", key: "customer", width: "120px" },
   {
     label: "Third Party Customer",
     key: "thirdPartyCustomer",
@@ -129,7 +44,7 @@ const columns = [
     key: "rate",
     width: "90px",
   },
-  { label: "Details", key: "actions" },
+  { label: "Details", key: "actions", minWidth: "100px" },
 ];
 
 const POCode = () => {
@@ -139,8 +54,77 @@ const POCode = () => {
   const [openPickupModal, setOpenPickupModal] = useState(false);
   const [search, setSearch] = useState("");
   const [hidePoModal, setHidePoModal] = useState(false);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [siteMap, setSiteMap] = useState<Record<string, string>>({});
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const filteredData = poCodeData.filter((item) => {
+  const loadSites = useCallback(async () => {
+    const [pickupRes, deliverRes] = await Promise.all([
+      siteService.getSites({ type: "pickup", limit: 100 }),
+      siteService.getSites({ type: "deliver", limit: 100 }),
+    ]);
+
+    const map: Record<string, string> = {};
+    [...pickupRes.data, ...deliverRes.data].forEach((site: Site) => {
+      map[site._id] = site.name;
+    });
+    setSiteMap(map);
+  }, []);
+
+  const loadJobs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getJobsApi(1, 100);
+      setJobs(res.data);
+    } catch (err) {
+      console.error("Failed to load PO codes:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSites();
+    loadJobs();
+  }, [loadSites, loadJobs]);
+
+  const tableData: POCodeRow[] = jobs.map((job) => ({
+    id: job._id,
+    code: job.code,
+    date: job.date ? new Date(job.date).toLocaleDateString("en-GB") : "-",
+pickup:
+  job.pickupSiteId &&
+  typeof job.pickupSiteId === "object"
+    ? job.pickupSiteId.name
+    : "-",
+
+deliver:
+  job.deliverySiteId &&
+  typeof job.deliverySiteId === "object"
+    ? job.deliverySiteId.name
+    : "-",
+
+customer:
+  job.customerId &&
+  typeof job.customerId === "object"
+    ? job.customerId.name
+    : "-",
+
+material:
+  job.materialId &&
+  typeof job.materialId === "object"
+    ? job.materialId.name
+    : "-",
+thirdPartyCustomer:
+  job.thirdPartyCustomerId &&
+  typeof job.thirdPartyCustomerId === "object"
+    ? job.thirdPartyCustomerId.name
+    : job.thirdPartyCustomerId ?? "----",
+    rate: `$${Number(job.rate).toFixed(2)}`,
+  }));
+
+  const filteredData = tableData.filter((item) => {
     const value = search.toLowerCase();
 
     return (
@@ -155,23 +139,46 @@ const POCode = () => {
     );
   });
 
-const handleOpenPickupModal = () => {
-  setHidePoModal(true);
-  setOpenPickupModal(true);
-};
+  const handleOpenPickupModal = () => {
+    setHidePoModal(true);
+    setOpenPickupModal(true);
+  };
 
-const handleClosePickupModal = () => {
-  setOpenPickupModal(false);
-  setHidePoModal(false);
-};
+  const handleClosePickupModal = () => {
+    setOpenPickupModal(false);
+    setHidePoModal(false);
+  };
 
-  const handleUpdate = () => {
+  const handleEdit = (row: POCodeRow) => {
+    const job = jobs.find((j) => j._id === row.id);
+    if (job) {
+      setSelectedJob(job);
+      setEditModal(true);
+    }
+  };
+
+  const handleDelete = async (row: POCodeRow) => {
+    try {
+      await deleteJobApi(row.id);
+      await loadJobs();
+    } catch (err) {
+      console.error("Failed to delete PO code:", err);
+    }
+  };
+
+  const handleRefresh = async () => {
+    await loadJobs();
     setShowSuccessModal(true);
 
     setTimeout(() => {
       setShowSuccessModal(false);
     }, 3000);
   };
+
+  const handleModalSuccess = () => {
+    loadJobs();
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -217,7 +224,7 @@ const handleClosePickupModal = () => {
             variant="secondary"
             iconOnly
             icon={<RefreshCcw size={14} />}
-            onClick={handleUpdate}
+            onClick={handleRefresh}
           />
         </div>
       </PageHeader>
@@ -225,32 +232,37 @@ const handleClosePickupModal = () => {
       <Table
         columns={columns}
         data={filteredData}
-        onEdit={() => setEditModal(true)}
-        onDelete={(item) => console.log(item)}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
         minWidth="min-w-[1100px]"
+        // loading={loading}
       />
 
       <CreatePOCodeModal
         open={openModal}
         onClose={() => setOpenModal(false)}
         onOpenPickupModal={handleOpenPickupModal}
+        onSuccess={handleModalSuccess}
       />
 
-  <CreatePOCodeModal
-  open={editModal && !hidePoModal}
-  onClose={() => {
-    setEditModal(false);
-    setHidePoModal(false);
-  }}
-  isEdit
-  onOpenPickupModal={handleOpenPickupModal}
-/>
+      <CreatePOCodeModal
+        open={editModal && !hidePoModal}
+        onClose={() => {
+          setEditModal(false);
+          setHidePoModal(false);
+          setSelectedJob(null);
+        }}
+        isEdit
+        job={selectedJob}
+        onOpenPickupModal={handleOpenPickupModal}
+        onSuccess={handleModalSuccess}
+      />
 
       <CreatePickupModal
         open={openPickupModal}
         onClose={handleClosePickupModal}
       />
-      
+
       <LoadUpdateSuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}

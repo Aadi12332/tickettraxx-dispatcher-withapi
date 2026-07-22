@@ -39,7 +39,8 @@ export const FSC_ENDPOINTS = {
  
 export const CUSTOMER_ENDPOINTS = {
   CUSTOMERS: "/customers",
-} as const;
+  CREATE_CUSTOMER: "/customers",
+};
 
 export const API_CONSTANTS = {
   SITES: {

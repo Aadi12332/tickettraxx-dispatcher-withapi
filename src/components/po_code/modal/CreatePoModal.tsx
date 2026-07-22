@@ -3,20 +3,32 @@ import { X, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import CommonTextInput from "../../common/CommonTextInput";
 import CommonSelectInput from "../../common/CommonSelectInput";
-
+import type {
+  Job,
+  CreateJobPayload,
+  UpdateJobPayload,
+} from "../../../types/auth.types";
 import {
-  deliveryOptions,
-  pickupOptions,
-  poCustomerOptions,
-  thirdPartyCustomerOptions2,
-} from "../../../utils/data";
-import { materialOptions } from "../../contractor/AddJobModal";
+  getCustomersApi,
+  getMaterialsApi,
+  siteService,
+  createJobApi,
+  updateJobApi,
+  createCustomerApi,
+} from "../../../services/auth.service";
 
 interface CreatePOCodeModalProps {
   open: boolean;
   onClose: () => void;
   isEdit?: boolean;
+  job?: Job | null;
   onOpenPickupModal?: () => void;
+  onSuccess?: () => void;
+}
+
+interface OptionType {
+  label: string;
+  value: string;
 }
 
 const initialFormData = {
@@ -30,53 +42,160 @@ const initialFormData = {
   deliver: "",
 };
 
-const editFormData = {
-  poCode: "5552389933",
-  material: "1' Rock",
-  customer: "Amrize",
-  thirdPartyCustomer: "Marley George",
-  invoiceRate: "10.00",
-  contractorRate: "8.50",
-  pickup: "AMRIZE-Ambrose",
-  deliver: "4950 Plano",
+const resolveId = (val: unknown): string => {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object" && val !== null && "_id" in val) {
+    return (val as { _id: string })._id;
+  }
+  return "";
 };
+
+const jobToFormData = (job: Job) => ({
+  poCode: job.code || "",
+  material: resolveId(job.materialId),
+  customer: resolveId(job.customerId),
+  thirdPartyCustomer: resolveId(job.thirdPartyCustomerId),
+  invoiceRate: job.rate != null ? String(job.rate) : "",
+  contractorRate: job.contractorRate != null ? String(job.contractorRate) : "",
+  pickup: resolveId(job.pickupSiteId),
+  deliver: resolveId(job.deliverySiteId),
+});
 
 const CreatePOCodeModal = ({
   open,
   onClose,
   isEdit = false,
+  job = null,
   onOpenPickupModal,
+  onSuccess,
 }: CreatePOCodeModalProps) => {
-const [formData, setFormData] = useState(
-  isEdit ? editFormData : initialFormData
-);
+  const [formData, setFormData] = useState(initialFormData);
+  const [submitting, setSubmitting] = useState(false);
+  const [thirdPartyOptions, setThirdPartyOptions] = useState<OptionType[]>([]);
+  const [customerOptions, setCustomerOptions] = useState<OptionType[]>([]);
+  const [materialOptions, setMaterialOptions] = useState<OptionType[]>([]);
+  const [pickupOptions, setPickupOptions] = useState<OptionType[]>([]);
+  const [deliveryOptions, setDeliveryOptions] = useState<OptionType[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [newThirdPartyName, setNewThirdPartyName] = useState("");
 
-useEffect(() => {
-  if (!open) return;
+  useEffect(() => {
+    if (!open) return;
 
-  setFormData(isEdit ? editFormData : initialFormData);
-}, [open, isEdit]);
+    setFormData(isEdit && job ? jobToFormData(job) : initialFormData);
+  }, [open, isEdit, job]);
 
-  const handleChange =
-    (field: keyof typeof formData) => (value: string) => {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
+  useEffect(() => {
+    if (!open) return;
+
+    const loadOptions = async () => {
+      setOptionsLoading(true);
+      try {
+        const [, materialsRes, pickupSitesRes, deliverSitesRes] =
+          await Promise.all([
+            loadCustomers(),
+            getMaterialsApi(1, 100),
+            siteService.getSites({ type: "pickup", limit: 100 }),
+            siteService.getSites({ type: "deliver", limit: 100 }),
+          ]);
+        setMaterialOptions(
+          materialsRes.data.map((m) => ({ label: m.name, value: m._id })),
+        );
+        setPickupOptions(
+          pickupSitesRes.data.map((s) => ({ label: s.name, value: s._id })),
+        );
+        setDeliveryOptions(
+          deliverSitesRes.data.map((s) => ({ label: s.name, value: s._id })),
+        );
+      } catch (err) {
+        console.error("Failed to load PO code options:", err);
+      } finally {
+        setOptionsLoading(false);
+      }
     };
 
+    loadOptions();
+  }, [open]);
+
+  const loadCustomers = async () => {
+    const customersRes = await getCustomersApi(1, 100);
+
+    const options = customersRes.data.map((c) => ({
+      label: c.name,
+      value: c._id,
+    }));
+
+    setCustomerOptions(options);
+    setThirdPartyOptions(options);
+
+    return customersRes.data;
+  };
+
+  const handleChange = (field: keyof typeof formData) => (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   const isFormValid = useMemo(() => {
-    return Object.values(formData).every(
-      (value) => String(value).trim() !== ""
+    const requiredFields = Object.entries(formData).filter(
+      ([key]) => key !== "thirdPartyCustomer",
     );
+
+    return requiredFields.every(([, value]) => String(value).trim() !== "");
   }, [formData]);
 
-  const handleSubmit = () => {
-    if (!isFormValid) return;
+  const parseAmount = (value: string): number => {
+    const cleaned = value.replace(/[^0-9.]/g, "");
+    return cleaned ? Number(cleaned) : 0;
+  };
 
-    console.log("PO Code Data:", formData);
+  const handleSubmit = async () => {
+    if (!isFormValid || submitting) return;
 
-    onClose();
+    let thirdPartyCustomerId: string | undefined =
+  formData.thirdPartyCustomer || undefined;
+
+if (
+  newThirdPartyName &&
+  !thirdPartyOptions.some((o) => o.value === formData.thirdPartyCustomer)
+) {
+  const res = await createCustomerApi(newThirdPartyName);
+
+  await loadCustomers();
+
+  thirdPartyCustomerId = res.data._id;
+}
+
+const payload: CreateJobPayload | UpdateJobPayload = {
+  code: formData.poCode,
+  customerId: formData.customer,
+  materialId: formData.material,
+  pickupSiteId: formData.pickup,
+  deliverySiteId: formData.deliver,
+  thirdPartyCustomerId,
+  rate: parseAmount(formData.invoiceRate),
+  contractorRate: parseAmount(formData.contractorRate),
+  date: new Date().toISOString().split("T")[0] + "T00:00:00.000Z",
+};
+
+    setSubmitting(true);
+    try {
+      if (isEdit && job) {
+        await updateJobApi(job._id, payload);
+      } else {
+        await createJobApi(payload as CreateJobPayload);
+      }
+
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      console.error("Failed to save PO code:", err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -91,8 +210,8 @@ useEffect(() => {
               </h2>
 
               <p className="mt-3 text-sm text-[#717182]">
-                Lorem Ipsum is simply dummy text of the printing and
-                typesetting industry.
+                Lorem Ipsum is simply dummy text of the printing and typesetting
+                industry.
               </p>
             </div>
 
@@ -117,6 +236,7 @@ useEffect(() => {
                 placeholder="Select one..."
                 onChange={handleChange("material")}
                 options={materialOptions}
+                // disabled={optionsLoading}
               />
 
               <CommonSelectInput
@@ -124,16 +244,24 @@ useEffect(() => {
                 value={formData.customer}
                 placeholder="Select one..."
                 onChange={handleChange("customer")}
-                options={poCustomerOptions}
+                options={customerOptions}
+                // disabled={optionsLoading}
               />
 
               <CommonSelectInput
                 label="Third Party Customer (if any)"
                 value={formData.thirdPartyCustomer}
-                placeholder="Select one..."
                 onChange={handleChange("thirdPartyCustomer")}
-                options={thirdPartyCustomerOptions2}
+                options={thirdPartyOptions}
                 addNewLabel="Add New"
+               onAddNew={(value) => {
+  setNewThirdPartyName(value);
+
+  setFormData((prev) => ({
+    ...prev,
+    thirdPartyCustomer: value,
+  }));
+}}
               />
 
               <CommonTextInput
@@ -159,8 +287,9 @@ useEffect(() => {
                 onChange={handleChange("pickup")}
                 options={pickupOptions}
                 addNewLabel="Add New"
-                addNewMode="modal"  
+                addNewMode="modal"
                 onAddNew={onOpenPickupModal}
+                // disabled={optionsLoading}
               />
 
               <CommonSelectInput
@@ -170,25 +299,25 @@ useEffect(() => {
                 onChange={handleChange("deliver")}
                 options={deliveryOptions}
                 addNewLabel="Add New"
-                addNewMode="modal"  
+                addNewMode="modal"
                 onAddNew={onOpenPickupModal}
+                // disabled={optionsLoading}
               />
             </div>
 
-            {/* Footer Buttons */}
             <div className="flex gap-4 mt-10">
               <button
                 onClick={handleSubmit}
-                disabled={!isFormValid}
+                disabled={!isFormValid || submitting}
                 className={`flex-1 min-w-[200px] h-[40px] rounded-[8px] text-sm font-normal flex items-center justify-center gap-1 transition-all
                   ${
-                    isFormValid
+                    isFormValid && !submitting
                       ? "bg-primary text-white cursor-pointer"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
               >
                 {!isEdit && <Plus size={18} />}
-                {isEdit ? "Save" : "Create PO Code"}
+                {submitting ? "Saving..." : isEdit ? "Save" : "Create PO Code"}
               </button>
 
               <button

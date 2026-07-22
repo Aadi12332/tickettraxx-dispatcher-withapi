@@ -298,34 +298,44 @@ export interface SiteResponse {
 export interface Contractor {
   _id: string;
   companyName: string;
+  name: string;
+  contractorCode?: string;
   primaryDriverName: string;
-  unitNumber: string;
-  email: string;
-  status: string;
   parkingLocation?: string;
-  createdAt: string;
-  updatedAt: string;
-
-  // ContractorModal ke extra fields — API response me abhi nahi dikhe,
-  // lekin form save karte waqt bhejte hain, backend jo support kare wo save karega
+  unitNumber: string;
+  phone: string;
+  email: string;
+  address?: string;
   zipCode?: string;
   state?: string;
   city?: string;
-  usdot?: string;
-  txdot?: string;
   signatureDate?: string;
   expirationDate?: string;
-  address?: string;
   idType?: string;
   idNumber?: string;
-  ownerOperatorFleet?: string;
-  phoneCode?: string;
-  companyTelephone?: string;
-  payPercentage?: string;
   contactName?: string;
+  autoSendRenewalReminders?: boolean;
+
+  usdotNumber?: string;
+txdotNumber?: string;
+  ownerOperatorOrFleet?: string;
+  payPercent?: string;
   trucks?: string;
   truckCount?: string;
-  autoRenewal?: boolean;
+  phoneCode?: string;
+contractDocument?: {
+  storageKey: string;
+  url: string;
+};
+
+coiDocument?: {
+  storageKey: string;
+  url: string;
+};
+
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ContractorPagination {
@@ -340,31 +350,38 @@ export interface ContractorListResponse {
   pagination: ContractorPagination;
 }
 
+interface UploadedFile {
+  name: string;
+  url: string;
+}
+
 export interface ContractorPayload {
   companyName: string;
   primaryDriverName: string;
   unitNumber: string;
+  phone: string;
   email: string;
   parkingLocation?: string;
   zipCode?: string;
   state?: string;
   city?: string;
-  usdot?: string;
-  txdot?: string;
   signatureDate?: string;
   expirationDate?: string;
   address?: string;
   idType?: string;
   idNumber?: string;
-  ownerOperatorFleet?: string;
-  phoneCode?: string;
-  companyTelephone?: string;
-  payPercentage?: string;
   contactName?: string;
+  autoSendRenewalReminders?: boolean;
+  usdotNumber?: string;
+txdotNumber?: string;
+  ownerOperatorOrFleet?: string;
+  payPercent?: string;
   trucks?: string;
   truckCount?: string;
-  autoRenewal?: boolean;
+  phoneCode?: string;
   status?: string;
+  contractFile?: UploadedFile;
+  coiFile?: UploadedFile;
 }
 
 export interface ContractorResponse {
@@ -374,12 +391,20 @@ export interface ContractorResponse {
 export interface Job {
   _id: string;
   code: string;
+
   customerId: Customer | string;
-  thirdPartyCustomerId: string | null;
+  thirdPartyCustomerId: Customer | string | null;
+
   pickupSiteId: Site | string;
   deliverySiteId: Site | string;
+
   materialId: Material | string | null;
+
   rate: number;
+  contractorRate?: number;
+
+  date?: string;
+
   totalLoads: number;
   status: string;
   createdAt: string;
@@ -407,6 +432,7 @@ export interface CreateJobPayload {
   thirdPartyCustomerId?: string;
   rate: number;
   contractorRate?: number;
+  date: string;
 }
 
 export interface UpdateJobPayload {

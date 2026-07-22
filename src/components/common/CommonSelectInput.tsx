@@ -46,8 +46,9 @@ const CommonSelectInput = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selectedLabel =
-    options.find((item) => item.value === value)?.label || "";
+const selectedOption = options.find((item) => item.value === value);
+
+const selectedLabel = selectedOption ? selectedOption.label : value || "";
 
   return (
     <div className="w-full" ref={wrapperRef}>
