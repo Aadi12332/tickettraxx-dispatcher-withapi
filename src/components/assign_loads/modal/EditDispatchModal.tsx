@@ -2,18 +2,15 @@ import { Modal } from "@mui/material";
 import { X, Plus, Minus } from "lucide-react";
 import CommonTextInput from "../../common/CommonTextInput";
 import CommonSelectInput from "../../common/CommonSelectInput";
-import { useEffect, useState } from "react";
-import { materialOptions } from "../../contractor/AddJobModal";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../../../store";
-import { addDispatch } from "../../../store/dispatchSlice";
-import {
-  poCustomerOptions,
-  deliveryOptions,
-  pickupOptions,
-  poCodeOptions,
-} from "../../../utils/data";
 import CreatePickupModal from "../../pickup/modal/CreatePickupModal";
+import {
+  getJobsApi,
+  createLoadApi,
+  siteService,
+} from "../../../services/auth.service";
+import type { Job, CreateLoadPayload } from "../../../types/auth.types";
 
 interface EditDispatchModalProps {
   open: boolean;
@@ -22,14 +19,18 @@ interface EditDispatchModalProps {
   description?: string;
   isEdit?: boolean;
   onOpenPickupModal?: () => void;
+  /** Required to create a Load against an existing dispatch. */
+  dispatchId?: string;
+  onSuccess?: () => void;
 }
 
 const initialFormData = {
   dispatchDate: "",
   customer: "",
-  poCode: "",
+  poCode: "", // holds jobId
   material: "",
   loads: "",
+  // weightPerTrip: "",
   invoiceRate: "",
   contractorRate: "",
   pickup: "",
@@ -39,137 +40,18 @@ const initialFormData = {
   comment: "",
 };
 
-// ---------- PO-wise data map ----------
-// Har PO code ke liye uska apna customer, materials (1/2/3), pickup,
-// deliver, rates, time aur comment. Jab bhi PO select hoga,
-// yahi se poora data pull hoga.
-interface PODataEntry {
-  customer: string;
-  materials: string[];
-  loads: string;
-  pickup: string;
-  deliver: string;
-  invoiceRate: string;
-  contractorRate: string;
-  startTime: string;
-  endTime: string;
-  comment: string;
-}
-
-const PO_DATA_MAP: Record<string, PODataEntry> = {
-  "5500016751": {
-    customer: "Amrize",
-    loads: "2",
-    materials: ["1' Rock"],
-    pickup: "AMRIZE-Ambrose",
-    deliver: "4950 Plano",
-    invoiceRate: "$10.00",
-    contractorRate: "$10.00",
-    startTime: "10:00",
-    endTime: "18:00",
-    comment: "Existing dispatch note...",
-  },
-
-  "5500016752": {
-    customer: "Heidelberg Materials",
-    loads: "1",
-    materials: [
-      "Manufactured Sand (Man Sand)",
-      "Concrete Sand",
-    ],
-    pickup: "HBERG-LakeBP",
-    deliver: "4951 Denton",
-    invoiceRate: "$12.00",
-    contractorRate: "$11.00",
-    startTime: "08:00",
-    endTime: "16:00",
-    comment: "Two-material dispatch for this PO.",
-  },
-
-  "5500016753": {
-    customer: "Martin Marietta",
-    loads: "2",
-    materials: [
-      "TX126 – 1” to #4 Crushed Stone",
-      "TX197 – TXDOT Type A Grade 1-2",
-      "TX157 – ¾” to #4 Crushed Stone",
-    ],
-    pickup: "Resolve Ravenna2",
-    deliver: "4952 Lewisville",
-    invoiceRate: "$15.00",
-    contractorRate: "$13.00",
-    startTime: "09:00",
-    endTime: "17:00",
-    comment: "Three-material dispatch for this PO.",
-  },
-
-  "5500016754": {
-    customer: "Resolve Aggregates",
-    loads: "3",
-    materials: ["TX373-Washed Concrete Sand"],
-    pickup: "HBERG-Bridgeport",
-    deliver: "4954 Blue Mound",
-    invoiceRate: "$9.50",
-    contractorRate: "$9.00",
-    startTime: "07:30",
-    endTime: "15:30",
-    comment: "",
-  },
-
-  "5500016755": {
-    customer: "RPM xConstruction",
-    loads: "2",
-    materials: [
-      "Flex Base",
-      "TX121 – 1-1/2” Crushed Stone",
-    ],
-    pickup: "AMRIZE-Rosser",
-    deliver: "4956 Coppell",
-    invoiceRate: "$11.00",
-    contractorRate: "$10.50",
-    startTime: "11:00",
-    endTime: "19:00",
-    comment: "",
-  },
-
-  "5500016756": {
-    customer: "Amrize",
-    loads: "2",
-    materials: [
-      "Manufactured Sand (Man Sand)",
-      "TX373-Washed Concrete Sand",
-      "Flex Base",
-    ],
-    pickup: "AMRIZE-Melissa",
-    deliver: "4966 Melissa",
-    invoiceRate: "$14.00",
-    contractorRate: "$12.50",
-    startTime: "06:00",
-    endTime: "14:00",
-    comment: "",
-  },
+const resolveId = (val: unknown): string => {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object" && val !== null && "_id" in val) {
+    return (val as { _id: string })._id;
+  }
+  return "";
 };
 
-const defaultEditPoCode = "5500016751";
-
-// isEdit mount ke time PO_DATA_MAP se poora data resolve kar deta hai,
-// taaki edit mode khulte hi sab kuch (time, comment sab) fill ho.
-const buildEditFormData = () => {
-  const poData = PO_DATA_MAP[defaultEditPoCode];
-  return {
-    dispatchDate: "2024-06-13",
-    customer: poData.customer,
-    poCode: defaultEditPoCode,
-    material: poData.materials[0],
-    loads: poData.loads,
-    invoiceRate: poData.invoiceRate,
-    contractorRate: poData.contractorRate,
-    pickup: poData.pickup,
-    deliver: poData.deliver,
-    startTime: poData.startTime,
-    endTime: poData.endTime,
-    comment: poData.comment,
-  };
+const parseAmount = (value: string): number => {
+  const cleaned = value.replace(/[^0-9.]/g, "");
+  return cleaned ? Number(cleaned) : 0;
 };
 
 const EditDispatchModal = ({
@@ -179,37 +61,77 @@ const EditDispatchModal = ({
   description,
   isEdit,
   onOpenPickupModal,
+  dispatchId,
+  onSuccess,
 }: EditDispatchModalProps) => {
   const [columns, setColumns] = useState<number[]>(isEdit ? [1] : []);
-  const [formData, setFormData] = useState(
-    isEdit ? buildEditFormData() : initialFormData,
-  );
+  const [formData, setFormData] = useState(initialFormData);
   const [openPickupModal, setOpenPickupModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [siteMap, setSiteMap] = useState<Record<string, string>>({});
+  const [optionsLoading, setOptionsLoading] = useState(false);
 
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (!open) return;
 
-    if (isEdit) {
-      setFormData(buildEditFormData());
-      setColumns([1]);
-    } else {
-      setFormData(initialFormData);
-      setColumns([]);
-    }
+    setFormData(initialFormData);
+    setColumns(isEdit ? [1] : []);
   }, [open, isEdit]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const loadOptions = async () => {
+      setOptionsLoading(true);
+      try {
+        const [jobsRes, pickupRes, deliverRes] = await Promise.all([
+          getJobsApi(1, 100),
+          siteService.getSites({ type: "pickup", limit: 100 }),
+          siteService.getSites({ type: "deliver", limit: 100 }),
+        ]);
+
+        setJobs(jobsRes.data);
+
+        const map: Record<string, string> = {};
+        [...pickupRes.data, ...deliverRes.data].forEach((site) => {
+          map[site._id] = site.name;
+        });
+        setSiteMap(map);
+      } catch (err) {
+        console.error("Failed to load dispatch options:", err);
+      } finally {
+        setOptionsLoading(false);
+      }
+    };
+
+    loadOptions();
+  }, [open]);
+
+  const jobOptions = useMemo(
+    () => jobs.map((j) => ({ label: j.code, value: j._id })),
+    [jobs],
+  );
+
+  const customerOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    jobs.forEach((j) => {
+      if (typeof j.customerId === "object" && j.customerId) {
+        seen.set(j.customerId._id, j.customerId.name);
+      }
+    });
+    return Array.from(seen, ([value, label]) => ({ label, value }));
+  }, [jobs]);
 
   const handleClose = () => {
     onClose();
   };
 
   const handleDispatchDateChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      dispatchDate: value,
-    }));
+    setFormData((prev) => ({ ...prev, dispatchDate: value }));
 
     if (columns.length === 0 && value) {
       setColumns([1]);
@@ -218,56 +140,75 @@ const EditDispatchModal = ({
 
   const handleChange = (field: keyof typeof formData) => (value: string) => {
     if (field === "poCode") {
-      const poData = PO_DATA_MAP[value];
+      const job = jobs.find((j) => j._id === value);
 
-      if (poData) {
-        // PO select hua aur uska data mila -> sab kuch (customer, pickup,
-        // deliver, material, rates, time, comment) auto-fill karo.
-       setFormData((prev) => ({
-  ...prev,
-  poCode: value,
-  customer: poData.customer,
-  pickup: poData.pickup,
-  deliver: poData.deliver,
-  material: poData.materials[0] || "",
-  loads: poData.loads,
-  invoiceRate: poData.invoiceRate,
-  contractorRate: poData.contractorRate,
-  startTime: poData.startTime,
-  endTime: poData.endTime,
-  comment: poData.comment,
-}));
-      } else {
-        // PO code cleared ya unknown -> sirf poCode set karo,
-        // material list wapas full list dikhayegi (neeche computed value se)
+      if (job) {
         setFormData((prev) => ({
           ...prev,
           poCode: value,
+          customer: resolveId(job.customerId),
+          material: resolveId(job.materialId),
+          pickup: resolveId(job.pickupSiteId),
+          deliver: resolveId(job.deliverySiteId),
+          invoiceRate: String(job.rate ?? ""),
         }));
+      } else {
+        setFormData((prev) => ({ ...prev, poCode: value }));
       }
 
       return;
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // PO select hai to sirf usi PO ke materials, warna poori list
-  const materialOptionsForSelectedPO = formData.poCode && PO_DATA_MAP[formData.poCode]
-    ? PO_DATA_MAP[formData.poCode].materials.map((m) => ({
-        label: m,
-        value: m,
-      }))
-    : materialOptions;
-
-  const handleSubmit = () => {
-    if (!isEdit) {
-      dispatch(addDispatch(formData));
+  const materialOptionsForSelectedJob = useMemo(() => {
+    const job = jobs.find((j) => j._id === formData.poCode);
+    if (job && typeof job.materialId === "object" && job.materialId) {
+      return [{ label: job.materialId.name, value: job.materialId._id }];
     }
-    handleClose();
+    return [];
+  }, [jobs, formData.poCode]);
+
+  const pickupOptions = useMemo(
+    () => Object.entries(siteMap).map(([value, label]) => ({ label, value })),
+    [siteMap],
+  );
+
+  const handleSubmit = async () => {
+    if (!isFormValid || submitting) return;
+
+    if (!dispatchId) {
+      console.error("Cannot create a Load without a dispatchId.");
+      return;
+    }
+
+    const payload: CreateLoadPayload = {
+      customerId: formData.customer,
+      dispatchId,
+      jobId: formData.poCode,
+      materialId: formData.material,
+      pickupSiteId: formData.pickup,
+      deliverySiteId: formData.deliver,
+      numberOfTrips: Number(formData.loads) || 0,
+      invoiceRate: parseAmount(formData.invoiceRate),
+      contractorRate: parseAmount(formData.contractorRate),
+      // weightPerTrip: Number(formData.weightPerTrip) || 0,
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      comment: formData.comment || undefined,
+    };
+
+    setSubmitting(true);
+    try {
+      await createLoadApi(payload);
+      onSuccess?.();
+      handleClose();
+    } catch (err) {
+      console.error("Failed to create load:", err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleAddColumn = () => {
@@ -285,16 +226,16 @@ const EditDispatchModal = ({
     formData.poCode.trim() !== "" &&
     formData.material.trim() !== "" &&
     formData.loads.trim() !== "" &&
+    // formData.weightPerTrip.trim() !== "" &&
     formData.invoiceRate.trim() !== "" &&
     formData.contractorRate.trim() !== "" &&
     formData.pickup.trim() !== "" &&
     formData.deliver.trim() !== "" &&
     formData.startTime.trim() !== "" &&
     formData.endTime.trim() !== "" &&
-    formData.comment.trim() !== "" &&
     columns.length > 0;
 
-  const disableActions = !isEdit && !isFormValid;
+  const disableActions = (!isEdit && !isFormValid) || submitting;
 
   return (
     <Modal open={open} onClose={handleClose}>
@@ -303,9 +244,7 @@ const EditDispatchModal = ({
           <div className="shrink-0 px-3 py-3 xl:px-4 xl:py-3 flex items-start justify-between">
             <div>
               <h2 className="text-lg xl:text-xl font-normal text-black">
-                {isEdit
-                  ? (title ?? "Edit Dispatch")
-                  : (title ?? "Create Dispatch")}
+                {isEdit ? (title ?? "Edit Dispatch") : (title ?? "Create Dispatch")}
               </h2>
               <p className="mt-1 text-xs md:text-sm md:mt-2 text-[#717182]">
                 {description ??
@@ -320,7 +259,6 @@ const EditDispatchModal = ({
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-4 xl:px-4 pb-3">
-            {/* Dispatch Date */}
             <div className="mt-6">
               <CommonTextInput
                 label="Dispatch Date"
@@ -331,36 +269,30 @@ const EditDispatchModal = ({
               />
             </div>
 
-            {/* Columns */}
-
-            {/* Form Grid */}
             {columns.map((_, index) => (
               <div key={index}>
                 <h3 className="text-sm xl:text-base font-semibold mb-4 mt-5">
                   Column {index + 1}
                 </h3>
-                <div
-                  // key={index}
-                  className="sm:grid-cols-2 grid-cols-1 mt-6 flex sm:grid flex-col gap-4"
-                >
+                <div className="sm:grid-cols-2 grid-cols-1 mt-6 flex sm:grid flex-col gap-4">
                   <CommonSelectInput
                     label="Customer"
                     value={formData.customer}
                     onChange={handleChange("customer")}
-                    options={poCustomerOptions}
+                    options={customerOptions}
                   />
 
                   <CommonSelectInput
                     label="Job ID# / PO Code"
                     value={formData.poCode}
                     onChange={handleChange("poCode")}
-                    options={poCodeOptions}
+                    options={jobOptions}
                   />
                   <CommonSelectInput
                     label="Material"
                     value={formData.material}
                     onChange={handleChange("material")}
-                    options={materialOptionsForSelectedPO}
+                    options={materialOptionsForSelectedJob}
                   />
 
                   <CommonTextInput
@@ -369,6 +301,13 @@ const EditDispatchModal = ({
                     onChange={handleChange("loads")}
                     placeholder="Enter"
                   />
+
+                  {/* <CommonTextInput
+                    label="Weight per Trip"
+                    value={formData.weightPerTrip}
+                    onChange={handleChange("weightPerTrip")}
+                    placeholder="Enter"
+                  /> */}
 
                   <CommonTextInput
                     label="Invoice Rate"
@@ -391,7 +330,7 @@ const EditDispatchModal = ({
                     value={formData.pickup}
                     onChange={handleChange("pickup")}
                     options={pickupOptions}
-                     addNewLabel="Add New"
+                    addNewLabel="Add New"
                     onAddNew={onOpenPickupModal}
                     addNewMode="modal"
                   />
@@ -400,7 +339,7 @@ const EditDispatchModal = ({
                     label="Deliver"
                     value={formData.deliver}
                     onChange={handleChange("deliver")}
-                    options={deliveryOptions}
+                    options={pickupOptions}
                     addNewLabel="Add New"
                     onAddNew={onOpenPickupModal}
                     addNewMode="modal"
@@ -429,9 +368,7 @@ const EditDispatchModal = ({
                       <textarea
                         placeholder="Enter..."
                         value={formData.comment}
-                        onChange={(e) =>
-                          handleChange("comment")(e.target.value)
-                        }
+                        onChange={(e) => handleChange("comment")(e.target.value)}
                         className="w-full h-[120px] border-[0.85px] border-[#E5E7EB] rounded-[8px] p-2 md:p-4 resize-none outline-none"
                       />
                     </div>
@@ -441,27 +378,19 @@ const EditDispatchModal = ({
             ))}
 
             <div className="mt-4 flex items-center gap-4">
-              <span className="text-sm xl:text-base font-semibold">
-                Columns:
-              </span>
+              <span className="text-sm xl:text-base font-semibold">Columns:</span>
 
               <button
-                // disabled={!formData.dispatchDate}
                 onClick={handleAddColumn}
-                className={`w-7 h-7 rounded flex items-center justify-center text-white bg-[#22C55E] cursor-pointer`}
+                className="w-7 h-7 rounded flex items-center justify-center text-white bg-[#22C55E] cursor-pointer"
               >
                 <Plus size={18} />
               </button>
-              {/* {columns.length} */}
               <button
                 disabled={columns.length === 0}
                 onClick={handleRemoveColumn}
                 className={`w-7 h-7 rounded flex items-center justify-center text-white
-                ${
-                  columns.length
-                    ? "bg-[#FF0000] cursor-pointer"
-                    : "bg-[#FF0000] cursor-not-allowed"
-                }`}
+                ${columns.length ? "bg-[#FF0000] cursor-pointer" : "bg-[#FF0000] cursor-not-allowed"}`}
               >
                 <Minus size={18} />
               </button>
@@ -475,7 +404,7 @@ const EditDispatchModal = ({
                 className="flex-1 min-w-[200px] h-[40px] bg-primary text-white rounded-[8px] text-sm flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-default"
               >
                 {!isEdit && <Plus size={18} />}
-                {!isEdit ? "Add Dispatch" : "Save"}
+                {submitting ? "Saving..." : !isEdit ? "Add Dispatch" : "Save"}
               </button>
 
               <button
@@ -486,7 +415,7 @@ const EditDispatchModal = ({
                 Add Another Column
               </button>
 
-              {isEdit || formData.poCode && (
+              {(isEdit || formData.poCode) && (
                 <button
                   onClick={() => navigate("/assign-loads")}
                   disabled={disableActions}

@@ -6,13 +6,10 @@ import DashboardStatCard from "../../components/dashboard/DashboardStatCard";
 import DashboardQuickView from "../../components/dashboard/DashboardQuickView";
 import RevenueChart from "../../components/dashboard/RevenueChart";
 import ShipmentOverview from "../../components/dashboard/ShipmentOverview";
-// import ShipmentMap from "../../components/dashboard/ShipmentMap";
-// import DriverTrackingCard from "../../components/dashboard/DrivingTrackingCard";
 import truck_fast_outline from "../../assets/icons/truck_fast_outline.svg";
 import truck from "../../assets/icons/heroicons_truck.svg";
 import box from "../../assets/icons/solar_box.svg";
 import box2 from "../../assets/icons/proicons_box.svg";
-// import SectionTitle from "../../components/common/SectionTitle";
 import CalendarModal from "../../components/common/modal/CalendorModal";
 import LoadsDetailsModal from "../../components/dashboard/modal/LoadsDetailsModal";
 import TrucksInTransitModal from "../../components/dashboard/modal/TrucksInTransitModal";
@@ -20,46 +17,36 @@ import TrucksDispatchedModal from "../../components/dashboard/modal/TrucksDispat
 import LoadsRemainingModal from "../../components/dashboard/modal/LoadsRemainingModal";
 import LiveShipmentTrackingModal from "../../components/dashboard/modal/LiveShipmentTrackingModal";
 import NextInQueueModal from "../../components/dashboard/modal/NextInQueueModal";
-// import CommonFilterDropdown from "../../components/common/CommonFilterDropdown";
 import { Reorder } from "framer-motion";
 import TrackingSection from "../../components/dashboard/TrackingSection";
+import { getDispatcherDashboardApi } from "../../services/auth.service";
+import type { DispatcherDashboard } from "../../types/auth.types";
 
-const dashboardStats = [
+// KPI type -> icon/label mapping. Values/change/chart-bars come from the API's kpiTrends.
+const statMeta = [
   {
     type: "loads-dispatched",
+    key: "loadsDispatchedToday" as const,
     title: "Loads Dispatched Today",
-    value: 248,
-    change: "+19.01%",
-    positive: true,
     icon: box,
-    chartBars: [23, 43, 23, 28, 48, 30, 44],
   },
   {
     type: "loads-remaining",
+    key: "loadsRemainingToday" as const,
     title: "Loads Remaining Today",
-    value: 75,
-    change: "-12%",
-    positive: false,
     icon: box2,
-    chartBars: [9, 43, 23, 15, 28, 30, 38],
   },
   {
     type: "trucks-transit",
+    key: "trucksInTransit" as const,
     title: "Trucks in Transit",
-    value: 30,
-    change: "+6%",
-    positive: true,
     icon: truck,
-    chartBars: [10, 20, 43, 23, 30, 40],
   },
   {
     type: "trucks-dispatched",
+    key: "trucksDispatched" as const,
     title: "Trucks Dispatched",
-    value: 58,
-    change: "-16%",
-    positive: false,
     icon: truck_fast_outline,
-    chartBars: [23, 33, 13, 28, 38, 10, 44],
   },
 ];
 
@@ -140,27 +127,18 @@ const trackingData: TrackingItem[] = [
   },
 ];
 
-  const DEFAULT_SECTIONS = [
-  "quick-view",
-  "analytics",
-  "tracking",
-];
+const DEFAULT_SECTIONS = ["quick-view", "analytics", "tracking"];
 
 const Dashboard = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-const [sections, setSections] = useState<string[]>(() => {
-  const saved = localStorage.getItem("dashboard-sections");
+  const [sections, setSections] = useState<string[]>(() => {
+    const saved = localStorage.getItem("dashboard-sections");
+    return saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+  });
 
-  return saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
-});
-
-useEffect(() => {
-  localStorage.setItem(
-    "dashboard-sections",
-    JSON.stringify(sections)
-  );
-}, [sections]);
-
+  useEffect(() => {
+    localStorage.setItem("dashboard-sections", JSON.stringify(sections));
+  }, [sections]);
 
   const [selectedDate, setSelectedDate] = useState<
     [Dayjs | null, Dayjs | null]
@@ -169,6 +147,27 @@ useEffect(() => {
   const [isLiveTrackingModalOpen, setIsLiveTrackingModalOpen] = useState(false);
   const [isNextModalOpen, setIsNextModalOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState(trackingData[0].value);
+
+  const [dashboardData, setDashboardData] = useState<DispatcherDashboard | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchDashboard = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await getDispatcherDashboardApi();
+      setDashboardData(res.data);
+    } catch {
+      setError("Unable to load dashboard data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
 
   const currentDriver =
     trackingData.find((d) => d.value === selectedDriver) ?? trackingData[0];
@@ -197,6 +196,30 @@ useEffect(() => {
     return "Select Date Range";
   };
 
+  // KPI trend ke daily series ko mini bar-chart heights (px) me convert karte hain
+  const seriesToBars = (series: { value: number }[]) => {
+    const max = Math.max(...series.map((s) => s.value), 1);
+    return series.map((s) => Math.max((s.value / max) * 44, 4));
+  };
+
+const dashboardStats = statMeta.map((meta) => {
+  const trend = dashboardData?.kpiTrends?.[meta.key];
+
+  return {
+    type: meta.type,
+    title: meta.title,
+    icon: meta.icon,
+
+    // Top-level API value
+    value: dashboardData?.[meta.key] ?? 0,
+
+    // Trend data
+    change: `${(trend?.changePct ?? 0) >= 0 ? "+" : ""}${trend?.changePct ?? 0}%`,
+    positive: (trend?.changePct ?? 0) >= 0,
+    chartBars: trend ? seriesToBars(trend.series) : [4, 4, 4, 4, 4, 4, 4],
+  };
+});
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -214,14 +237,23 @@ useEffect(() => {
         </button>
       </div>
 
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
       <div className=" grid gap-2 md:gap-3 grid-cols-2 lg:grid-cols-4">
-        {dashboardStats.map((item) => (
-          <DashboardStatCard
-            key={item.title}
-            {...item}
-            onClick={() => setSelectedStat(item.type)}
-          />
-        ))}
+        {loading
+          ? statMeta.map((meta) => (
+              <div
+                key={meta.type}
+                className="bg-white rounded-[5px] border border-(--border-gray-2) shadow-xs min-h-[130px] animate-pulse"
+              />
+            ))
+          : dashboardStats.map((item) => (
+              <DashboardStatCard
+                key={item.title}
+                {...item}
+                onClick={() => setSelectedStat(item.type)}
+              />
+            ))}
       </div>
 
       <Reorder.Group
@@ -241,16 +273,26 @@ useEffect(() => {
               <GripVertical size={18} />
             </div>
             {section === "quick-view" && (
-              <DashboardQuickView selectedDate={selectedDate} />
+              <DashboardQuickView
+                selectedDate={selectedDate}
+                driverPerformance={dashboardData?.driverPerformance ?? []}
+                loading={loading}
+              />
             )}
 
             {section === "analytics" && (
               <div className="grid grid-cols-1 xl:grid-cols-[3fr_2fr] gap-3">
                 <div className="">
-                  <RevenueChart />
+                  <RevenueChart
+                    revenueSummary={dashboardData?.revenueSummary ?? null}
+                    loading={loading}
+                  />
                 </div>
 
-                <ShipmentOverview />
+                <ShipmentOverview
+                  shipmentsByCustomer={dashboardData?.shipmentsByCustomer ?? []}
+                  loading={loading}
+                />
               </div>
             )}
 
@@ -276,7 +318,7 @@ useEffect(() => {
         isOpen={selectedStat === "loads-dispatched"}
         onClose={() => setSelectedStat(null)}
         title={
-          dashboardStats.find((stat) => stat.type === "loads-dispatched")?.title
+          statMeta.find((stat) => stat.type === "loads-dispatched")?.title
         }
       />
 

@@ -1,67 +1,56 @@
-import { useState } from "react";
-import dayjs from "dayjs";
+import { useEffect, useState } from "react";
 import { Calendar1 } from "lucide-react";
+import dayjs from "dayjs";
 import SectionTitle from "../common/SectionTitle";
 import CalendarModal from "../common/modal/CalendorModal";
 import CommonFilterDropdown from "../common/CommonFilterDropdown";
 import CommonButton from "../common/CommonButton";
-export const poCustomerOptions = [
-  { label: "All", value: "All" },
-  { label: "Amrize", value: "Amrize" },
-  { label: "Heidelberg Materials", value: "Heidelberg Materials" },
-  { label: "Martin Marietta", value: "Martin Marietta" },
-  { label: "Resolve Aggregates", value: "Resolve Aggregates" },
-  { label: "RPM xConstruction", value: "RPM xConstruction" },
-];
-const shipmentDataByDate: Record<
-  string,
-  { day: string; value: number; active?: boolean }[]
-> = {
-  "2026-07-10": [
-    { day: "M", value: 55 },
-    { day: "T", value: 90 },
-    { day: "W", value: 35 },
-    { day: "T", value: 110 },
-    { day: "F", value: 85, active: true },
-    { day: "S", value: 80 },
-    { day: "S", value: 80 },
-  ],
+import { getCustomersApi } from "../../services/auth.service";
+import type { ShipmentByCustomer } from "../../types/auth.types";
 
-  "2026-07-09": [
-    { day: "M", value: 45 },
-    { day: "T", value: 70 },
-    { day: "W", value: 50 },
-    { day: "T", value: 95 },
-    { day: "F", value: 60, active: true },
-    { day: "S", value: 75 },
-    { day: "S", value: 65 },
-  ],
-};
+interface ShipmentOverviewProps {
+  shipmentsByCustomer: ShipmentByCustomer[];
+  loading?: boolean;
+}
 
-const emptyShipmentData = [
-  { day: "M", value: 0 },
-  { day: "T", value: 0 },
-  { day: "W", value: 0 },
-  { day: "T", value: 0 },
-  { day: "F", value: 0 },
-  { day: "S", value: 0 },
-  { day: "S", value: 0 },
-];
-
-export default function ShipmentOverview() {
+export default function ShipmentOverview({
+  shipmentsByCustomer,
+  loading = false,
+}: ShipmentOverviewProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState(
-    poCustomerOptions[0].value,
-  );
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
 
-  const [selectedDate, setSelectedDate] = useState("2026-07-10");
+  // Customer filter dropdown ab real customers API se aata hai (pehle static poCustomerOptions tha)
+  const [customerOptions, setCustomerOptions] = useState<
+    { label: string; value: string }[]
+  >([{ label: "All", value: "All" }]);
+  const [selectedCustomer, setSelectedCustomer] = useState("All");
 
-  const shipmentData = shipmentDataByDate[selectedDate] ?? emptyShipmentData;
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await getCustomersApi();
+        setCustomerOptions([
+          { label: "All", value: "All" },
+          ...res.data.map((c) => ({ label: c.name, value: c._id })),
+        ]);
+      } catch {
+        // customer list fetch fail ho to bhi "All" option kaam karta rahega
+      }
+    };
+    fetchCustomers();
+  }, []);
 
-  const top2Values = [...shipmentData]
-    .sort((a, b) => b.value - a.value)
+  const filteredShipments =
+    selectedCustomer === "All"
+      ? shipmentsByCustomer
+      : shipmentsByCustomer.filter((s) => s.customerId === selectedCustomer);
+
+  const maxCount = Math.max(...filteredShipments.map((s) => s.count), 1);
+  const top2Ids = [...filteredShipments]
+    .sort((a, b) => b.count - a.count)
     .slice(0, 2)
-    .map((item) => item.value);
+    .map((s) => s.customerId);
 
   return (
     <div className="bg-white rounded-[5px] border shadow-sm border-(--border-gray-2) pb-2">
@@ -72,10 +61,11 @@ export default function ShipmentOverview() {
           <CommonFilterDropdown
             value={selectedCustomer}
             onChange={setSelectedCustomer}
-            options={poCustomerOptions}
+            options={customerOptions}
             size="140px"
           />
 
+          {/* Note: dashboard API abhi date-range filter accept nahi karti, isliye ye sirf date label dikhata hai */}
           <CommonButton
             onClick={() => setIsCalendarOpen(true)}
             variant="secondary"
@@ -89,41 +79,47 @@ export default function ShipmentOverview() {
         </div>
       </div>
 
-      <div className="flex items-end justify-between xl:h-[290px] h-[200px] mt-10 px-4">
-        {shipmentData.map((item, index) => (
-          <div
-            key={index}
-            className="group flex flex-col items-center gap-2 relative"
-          >
-            {/* Count - Hover par */}
-            <div className="absolute -top-7 hidden group-hover:block bg-primary text-white text-[10px] px-1.5 py-0.5 rounded">
-              {item.value}
-            </div>
-
-            {/* Top 2 bars par star */}
-            {top2Values.includes(item.value) && (
-              <div className="absolute -top-0 text-white text-[10px]">★</div>
-            )}
-
-            <div
-              className="w-3.5 rounded-full bg-text-gray"
-              style={{
-                height: `${Math.max(item.value * 1.2, 4)}px`,
-              }}
-            />
-
-            <span className="text-gray-500 text-xs">{item.day}</span>
+      <div className="flex items-end justify-between xl:h-[290px] h-[200px] mt-10 px-4 gap-2 overflow-x-auto">
+        {loading ? (
+          <div className="w-full h-full animate-pulse bg-gray-50" />
+        ) : filteredShipments.length === 0 ? (
+          <div className="w-full h-full flex items-center justify-center text-sm text-[#6B7280]">
+            No shipment data yet
           </div>
-        ))}
+        ) : (
+          filteredShipments.map((item) => (
+            <div
+              key={item.customerId}
+              className="group flex flex-col items-center gap-2 relative shrink-0"
+            >
+              {/* Count - Hover par */}
+              <div className="absolute -top-7 hidden group-hover:block bg-primary text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap">
+                {item.count}
+              </div>
+
+              {/* Top 2 bars par star */}
+              {top2Ids.includes(item.customerId) && (
+                <div className="absolute -top-0 text-white text-[10px]">★</div>
+              )}
+
+              <div
+                className="w-3.5 rounded-full bg-text-gray"
+                style={{
+                  height: `${Math.max((item.count / maxCount) * 180, 4)}px`,
+                }}
+              />
+
+              <span className="text-gray-500 text-xs max-w-[60px] truncate text-center" title={item.name}>
+                {item.name}
+              </span>
+            </div>
+          ))
+        )}
       </div>
 
       <div className="flex items-center gap-3 mt-4 px-4 font-archivo">
-        <span className="bg-green text-white px-2 py-1 rounded-lg text-xs 2xl:text-sm">
-          +6%
-        </span>
-
         <span className="text-xs 2xl:text-sm text-(--text-gray)">
-          98% of completion
+          {filteredShipments.reduce((acc, s) => acc + s.count, 0)} total shipments
         </span>
       </div>
 

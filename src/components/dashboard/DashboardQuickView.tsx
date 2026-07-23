@@ -1,113 +1,35 @@
 import { SlidersHorizontal } from "lucide-react";
 import SectionTitle from "../common/SectionTitle";
 import { useState } from "react";
-import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import LiveShipmentTrackingModal from "./modal/LiveShipmentTrackingModal";
 import CommonFilterDropdown from "../common/CommonFilterDropdown";
-
-interface Driver {
-  id: number;
-  name: string;
-  image: string;
-  trips: number;
-  remainingLoads: string;
-  onTime: string;
-  revenue: string;
-  rating: number;
-  date: string;
-}
+import { getInitials } from "../../hooks/useAuth";
+import type { DriverPerformance } from "../../types/auth.types";
 
 interface DashboardQuickViewProps {
   selectedDate?: [Dayjs | null, Dayjs | null];
+  driverPerformance: DriverPerformance[];
+  loading?: boolean;
 }
-
-const drivers: Driver[] = [
-  {
-    id: 1,
-    name: "Anthony Lewis",
-    image: "https://i.pravatar.cc/150?img=11",
-    trips: 38,
-    remainingLoads: "2 of 10",
-    onTime: "96%",
-    revenue: "$4,50,000",
-    rating: 4.7,
-    date: "2026-07-05",
-  },
-  {
-    id: 2,
-    name: "Brian Villalobos",
-    image: "https://i.pravatar.cc/150?img=12",
-    trips: 29,
-    remainingLoads: "3 of 10",
-    onTime: "91%",
-    revenue: "$3,15,000",
-    rating: 4.5,
-    date: "2026-07-08",
-  },
-  {
-    id: 3,
-    name: "Harvey Smith",
-    image: "https://i.pravatar.cc/150?img=13",
-    trips: 29,
-    remainingLoads: "1 of 10",
-    onTime: "98%",
-    revenue: "$8,40,000",
-    rating: 4.5,
-    date: "2026-06-28",
-  },
-  {
-    id: 4,
-    name: "Stephan Peralt",
-    image: "https://i.pravatar.cc/150?img=14",
-    trips: 41,
-    remainingLoads: "2 of 10",
-    onTime: "98%",
-    revenue: "$8,40,000",
-    rating: 4.2,
-    date: "2026-07-11",
-  },
-  {
-    id: 5,
-    name: "Mike Hawkins",
-    image: "https://i.pravatar.cc/150?img=15",
-    trips: 20,
-    remainingLoads: "3 of 10",
-    onTime: "96%",
-    revenue: "$6,10,000",
-    rating: 4.0,
-    date: "2026-07-12",
-  },
-  {
-    id: 6,
-    name: "Robert Downy",
-    image: "https://i.pravatar.cc/150?img=16",
-    trips: 38,
-    remainingLoads: "4 of 10",
-    onTime: "96%",
-    revenue: "$5,55,000",
-    rating: 4.0,
-    date: "2026-07-16",
-  },
-];
 
 const DriverRow = ({
   driver,
   onDriverClick,
 }: {
-  driver: Driver;
+  driver: DriverPerformance;
   onDriverClick: () => void;
 }) => {
   return (
     <tr className="border-b border-gray-100 last:border-none font-archivo">
       <td className="py-2 px-3 font-archivo">
         <div className="flex items-center gap-3">
-          <img
-            src={driver.image}
-            alt={driver.name}
-            className="w-8 h-8 rounded-full object-cover cursor-pointer"
+          <div
             onClick={onDriverClick}
-          />
+            className="w-8 h-8 rounded-full bg-sky-blue flex items-center justify-center text-white text-[10px] font-semibold cursor-pointer shrink-0"
+          >
+            {getInitials(driver.name)}
+          </div>
           <span
             className="text-sm font-medium text-black font-archivo cursor-pointer hover:underline"
             onClick={onDriverClick}
@@ -117,94 +39,49 @@ const DriverRow = ({
         </div>
       </td>
 
-      <td className="py-5 text-sm text-black  font-archivo">{driver.trips}</td>
+      <td className="py-5 text-sm text-black  font-archivo">{driver.completedTrips}</td>
 
       <td className="py-5 text-sm text-black  font-archivo">
         {driver.remainingLoads}
       </td>
 
       <td className="py-5 text-sm text-text-secondary  font-archivo">
-        {driver.onTime}
+        {driver.onTimePct}%
       </td>
 
       <td className="py-5 text-sm text-text-secondary  font-archivo">
-        {driver.revenue}
+        ${driver.revenue.toLocaleString()}
       </td>
 
       <td className="py-5">
-        <div className="flex items-center gap-2 text-text-secondary  font-archivo text-sm">
-          ⭐ {driver.rating}
-        </div>
+       <div className="flex items-center gap-2 text-text-secondary font-archivo text-sm">
+  {driver.rating != null ? `⭐ ${driver.rating}` : "-"}
+</div>
       </td>
     </tr>
   );
 };
 
-const DashboardQuickView = ({ selectedDate = [null, null] }: DashboardQuickViewProps) => {
+const DashboardQuickView = ({
+  driverPerformance,
+  loading = false,
+}: DashboardQuickViewProps) => {
   const [isLiveTrackingModalOpen, setIsLiveTrackingModalOpen] = useState(false);
   const [completionSort, setCompletionSort] = useState("");
-  const [ratingSort, setRatingSort] = useState("");
 
-  // const formatDateRange = () => {
-  //   const [start, end] = selectedDate;
-
-  //   if (!start && !end) return "";
-
-  //   if (start && !end) return start.format("DD/MM/YYYY");
-
-  //   if (start && end) {
-  //     return `${start.format("DD/MM/YYYY")} - ${end.format("DD/MM/YYYY")}`;
-  //   }
-
-  //   return "";
-  // };
-
-  const filteredDrivers = [...drivers].filter((driver) => {
-    const [start, end] = selectedDate;
-
-    if (!start && !end) return true;
-
-    const driverDate = dayjs(driver.date);
-
-    if (start && !end) {
-      return driverDate.isSame(start, "day");
-    }
-
-    if (start && end) {
-      return (
-        driverDate.isSame(start, "day") ||
-        driverDate.isSame(end, "day") ||
-        (driverDate.isAfter(start, "day") && driverDate.isBefore(end, "day"))
-      );
-    }
-
-    return true;
-  });
-
-  const sortedDrivers = [...filteredDrivers].sort((a, b) => {
-    if (ratingSort) {
-      if (ratingSort === "rating_high_to_low") {
-        return b.rating - a.rating;
-      }
-
-      if (ratingSort === "rating_low_to_high") {
-        return a.rating - b.rating;
-      }
-    }
-
-    const aOnTime = parseInt(a.onTime.replace("%", ""));
-    const bOnTime = parseInt(b.onTime.replace("%", ""));
-
+  // Note: API driverPerformance me rating field nahi aati — rating column/sort hata diya hai
+  const sortedDrivers = [...driverPerformance].sort((a, b) => {
     if (completionSort === "low_to_high") {
-      return aOnTime - bOnTime;
+      return a.onTimePct - b.onTimePct;
     }
 
     if (completionSort === "high_to_low") {
-      return bOnTime - aOnTime;
+      return b.onTimePct - a.onTimePct;
     }
 
     return 0;
   });
+
   return (
     <div className="bg-white rounded-[5px] border border-(--border-gray-2) overflow-hidden shadow-sm">
       {/* Header */}
@@ -218,10 +95,7 @@ const DashboardQuickView = ({ selectedDate = [null, null] }: DashboardQuickViewP
         <div className="flex items-center gap-1 sm:gap-4">
           <CommonFilterDropdown
             value={completionSort}
-            onChange={(value) => {
-              setCompletionSort(value);
-              setRatingSort("");
-            }}
+            onChange={setCompletionSort}
             icon={!completionSort ? <SlidersHorizontal size={18} /> : null}
             options={[
               { label: "Default", value: "" },
@@ -230,7 +104,6 @@ const DashboardQuickView = ({ selectedDate = [null, null] }: DashboardQuickViewP
             ]}
             size="auto"
           />
-
         </div>
       </div>
 
@@ -260,34 +133,23 @@ const DashboardQuickView = ({ selectedDate = [null, null] }: DashboardQuickViewP
                 Revenue
               </th>
 
-              <th
-                onClick={() =>
-                  setRatingSort(
-                    ratingSort === "rating_high_to_low"
-                      ? "rating_low_to_high"
-                      : "rating_high_to_low",
-                  )
-                }
-                className="text-left text-xs sm:text-sm font-semibold text-black font-archivo cursor-pointer"
-              >
-                Rating{" "}
-                <span className="text-[8px]">
-                  {" "}
-                  {ratingSort === "rating_high_to_low"
-                    ? "▼"
-                    : ratingSort === "rating_low_to_high"
-                      ? "▲"
-                      : "▼"}
-                </span>
+              <th className="text-left text-xs sm:text-sm font-semibold text-black font-archivo">
+                Rating
               </th>
             </tr>
           </thead>
 
           <tbody>
-            {sortedDrivers.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-sm text-text-secondary">
+                  Loading...
+                </td>
+              </tr>
+            ) : sortedDrivers.length > 0 ? (
               sortedDrivers.map((driver) => (
                 <DriverRow
-                  key={driver.id}
+                  key={driver.driverId}
                   driver={driver}
                   onDriverClick={() => setIsLiveTrackingModalOpen(true)}
                 />

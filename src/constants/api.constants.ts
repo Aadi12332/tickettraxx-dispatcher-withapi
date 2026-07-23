@@ -58,3 +58,12 @@ export const JOB_ENDPOINTS = {
   JOBS: "/jobs",
   JOB_BY_ID: (id: string) => `/jobs/${id}`,
 } as const;
+
+export const DASHBOARD_ENDPOINTS = {
+  DISPATCHER: "/dashboard/dispatcher",
+} as const;
+
+export const LOAD_ENDPOINTS = {
+  LOADS: "/loads",
+  LOAD_BY_ID: (id: string) => `/loads/${id}`,
+} as const;

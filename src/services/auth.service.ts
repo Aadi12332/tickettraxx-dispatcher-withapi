@@ -4,9 +4,11 @@ import {
   AUTH_ENDPOINTS,
   CONTRACTOR_ENDPOINTS,
   CUSTOMER_ENDPOINTS,
+  DASHBOARD_ENDPOINTS,
   DISPATCH_ENDPOINTS,
   FSC_ENDPOINTS,
   JOB_ENDPOINTS,
+  LOAD_ENDPOINTS,
   MATERIAL_ENDPOINTS,
   NOTIFICATION_ENDPOINTS,
 } from "../constants/api.constants";
@@ -42,6 +44,11 @@ import type {
   CreateJobPayload,
   JobResponse,
   UpdateJobPayload,
+  DispatcherDashboardResponse,
+  LoadResponse,
+  CreateLoadPayload,
+  LoadListResponse,
+  UpdateLoadPayload,
 } from "../types/auth.types";
 
 export const loginApi = async (
@@ -344,4 +351,47 @@ export const updateJobApi = async (
 
 export const deleteJobApi = async (id: string): Promise<void> => {
   await axiosInstance.delete(JOB_ENDPOINTS.JOB_BY_ID(id));
+};
+
+export const getDispatcherDashboardApi = async (): Promise<DispatcherDashboardResponse> => {
+  const { data } = await axiosInstance.get<DispatcherDashboardResponse>(
+    DASHBOARD_ENDPOINTS.DISPATCHER
+  );
+  return data;
+};
+
+export const getLoadsApi = async (
+  page = 1,
+  limit = 20,
+): Promise<LoadListResponse> => {
+  const { data } = await axiosInstance.get<LoadListResponse>(
+    LOAD_ENDPOINTS.LOADS,
+    { params: { page, limit } },
+  );
+  return data;
+};
+
+export const createLoadApi = async (
+  payload: CreateLoadPayload,
+): Promise<LoadResponse> => {
+  const { data } = await axiosInstance.post<LoadResponse>(
+    LOAD_ENDPOINTS.LOADS,
+    payload,
+  );
+  return data;
+};
+
+export const updateLoadApi = async (
+  id: string,
+  payload: UpdateLoadPayload,
+): Promise<LoadResponse> => {
+  const { data } = await axiosInstance.patch<LoadResponse>(
+    LOAD_ENDPOINTS.LOAD_BY_ID(id),
+    payload,
+  );
+  return data;
+};
+
+export const deleteLoadApi = async (id: string): Promise<void> => {
+  await axiosInstance.delete(LOAD_ENDPOINTS.LOAD_BY_ID(id));
 };

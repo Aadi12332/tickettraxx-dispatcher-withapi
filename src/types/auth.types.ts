@@ -451,3 +451,144 @@ export interface UpdateJobPayload {
 export interface JobResponse {
   data: Job;
 }
+
+export interface DriverPerformance {
+  rating: null;
+  driverId: string;
+  name: string;
+  completedTrips: number;
+  remainingLoads: number;
+  onTimePct: number;
+  revenue: number;
+}
+
+export interface RevenueChartPoint {
+  date: string;
+  tickets: number;
+  revenue: number;
+}
+
+export interface RevenueMonthPoint {
+  month: string; // "2026-01"
+  revenue: number;
+}
+
+export interface RevenueSummary {
+  total: number;
+  yoyPercent: number | null;
+  monthlySeries: RevenueMonthPoint[];
+  period: string;
+}
+
+export interface ShipmentByCustomer {
+  count: number;
+  customerId: string;
+  name: string;
+}
+
+export interface KpiTrendPoint {
+  date: string;
+  value: number;
+}
+
+export interface KpiTrend {
+  series: KpiTrendPoint[];
+  current: number;
+  changePct: number;
+}
+
+export interface KpiTrends {
+  loadsDispatchedToday: KpiTrend;
+  loadsRemainingToday: KpiTrend;
+  trucksInTransit: KpiTrend;
+  trucksDispatched: KpiTrend;
+}
+
+export interface DispatcherDashboard {
+  loadsDispatchedToday: number;
+  loadsRemainingToday: number;
+  trucksInTransit: number;
+  trucksDispatched: number;
+  driverPerformance: DriverPerformance[];
+  revenueChart: RevenueChartPoint[];
+  revenueSummary: RevenueSummary;
+  shipmentsByCustomer: ShipmentByCustomer[];
+  kpiTrends: KpiTrends;
+}
+
+export interface DispatcherDashboardResponse {
+  data: DispatcherDashboard;
+}
+
+export interface Load {
+  _id: string;
+  loadNo: string;
+  customerId: Customer | string;
+  contractorId: Contractor | string | null;
+  jobId: Job | string;
+  dispatchId: string;
+  startTime: string;
+  endTime: string;
+  comment?: string;
+  numberOfTrips: number;
+  invoiceRate: number;
+  contractorRate: number;
+  pickupSiteId: Site | string;
+  deliverySiteId: Site | string;
+  materialId: Material | string;
+  // weightPerTrip: number;
+  status: string;
+  eta: string | null;
+  miles: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoadPagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export interface LoadListResponse {
+  data: Load[];
+  pagination: LoadPagination;
+}
+
+export interface CreateLoadPayload {
+  customerId: string;
+  dispatchId: string;
+  jobId: string;
+  materialId: string;
+  pickupSiteId: string;
+  deliverySiteId: string;
+  numberOfTrips: number;
+  invoiceRate: number;
+  contractorRate: number;
+  // weightPerTrip: number;
+  startTime: string;
+  endTime: string;
+  comment?: string;
+}
+
+export interface UpdateLoadPayload {
+  customerId?: string;
+  dispatchId?: string;
+  jobId?: string;
+  materialId?: string;
+  pickupSiteId?: string;
+  deliverySiteId?: string;
+  numberOfTrips?: number;
+  invoiceRate?: number;
+  contractorRate?: number;
+  // weightPerTrip?: number;
+  startTime?: string;
+  endTime?: string;
+  comment?: string;
+  status?: string;
+}
+
+export interface LoadResponse {
+  data: Load;
+}

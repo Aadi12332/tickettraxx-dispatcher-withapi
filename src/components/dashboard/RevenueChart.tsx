@@ -7,132 +7,56 @@ import {
   Tooltip,
 } from "recharts";
 import SectionTitle from "../common/SectionTitle";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import ToggleButtonGroup from "../common/ToggleButtonGroup";
+import type { RevenueSummary } from "../../types/auth.types";
 
-type RevenueItem = {
-  month: string;
-  revenue: number;
-};
+interface RevenueChartProps {
+  revenueSummary: RevenueSummary | null;
+  loading?: boolean;
+}
 
-type RevenueData = {
-  ytd: RevenueItem[];
-  months12: RevenueItem[];
-};
-
-const ytdData: RevenueItem[] = [
-  { month: "Jan", revenue: 42000 },
-  { month: "Feb", revenue: 33000 },
-  { month: "Mar", revenue: 44000 },
-  { month: "Apr", revenue: 29000 },
-  { month: "May", revenue: 65000 },
-  { month: "Jun", revenue: 72000 },
-  { month: "Jul", revenue: 65000 },
-  { month: "Aug", revenue: 76000 },
-  { month: "Sep", revenue: 76000 },
-  { month: "Oct", revenue: 79000 },
-  { month: "Nov", revenue: 22000 },
-  { month: "Dec", revenue: 79000 },
+const monthNames = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-const last12MonthsData: RevenueItem[] = [
-  { month: "Feb", revenue: 35000 },
-  { month: "Mar", revenue: 28000 },
-  { month: "Apr", revenue: 47000 },
-  { month: "May", revenue: 39000 },
-  { month: "Jun", revenue: 68000 },
-  { month: "Jul", revenue: 74000 },
-  { month: "Aug", revenue: 62000 },
-  { month: "Sep", revenue: 71000 },
-  { month: "Oct", revenue: 69000 },
-  { month: "Nov", revenue: 25000 },
-  { month: "Dec", revenue: 82000 },
-  { month: "Jan", revenue: 77000 },
-];
-
-const revenueData: Record<number, RevenueData> = {
-  2024: {
-    ytd: [
-      { month: "Jan", revenue: 28000 },
-      { month: "Feb", revenue: 32000 },
-      { month: "Mar", revenue: 41000 },
-      { month: "Apr", revenue: 38000 },
-      { month: "May", revenue: 45000 },
-      { month: "Jun", revenue: 52000 },
-      { month: "Jul", revenue: 61000 },
-      { month: "Aug", revenue: 59000 },
-      { month: "Sep", revenue: 65000 },
-      { month: "Oct", revenue: 70000 },
-      { month: "Nov", revenue: 62000 },
-      { month: "Dec", revenue: 75000 },
-    ],
-    months12: [
-      { month: "Feb", revenue: 31000 },
-      { month: "Mar", revenue: 34000 },
-      { month: "Apr", revenue: 39000 },
-      { month: "May", revenue: 46000 },
-      { month: "Jun", revenue: 51000 },
-      { month: "Jul", revenue: 60000 },
-      { month: "Aug", revenue: 58000 },
-      { month: "Sep", revenue: 63000 },
-      { month: "Oct", revenue: 67000 },
-      { month: "Nov", revenue: 69000 },
-      { month: "Dec", revenue: 72000 },
-      { month: "Jan", revenue: 76000 },
-    ],
-  },
-
-  2025: {
-    ytd: ytdData,
-    months12: last12MonthsData,
-  },
-
-  2026: {
-    ytd: [
-      { month: "Jan", revenue: 52000 },
-      { month: "Feb", revenue: 48000 },
-      { month: "Mar", revenue: 59000 },
-      { month: "Apr", revenue: 63000 },
-      { month: "May", revenue: 71000 },
-      { month: "Jun", revenue: 76000 },
-      { month: "Jul", revenue: 80000 },
-      { month: "Aug", revenue: 83000 },
-      { month: "Sep", revenue: 78000 },
-      { month: "Oct", revenue: 85000 },
-      { month: "Nov", revenue: 79000 },
-      { month: "Dec", revenue: 91000 },
-    ],
-    months12: [
-      { month: "Feb", revenue: 50000 },
-      { month: "Mar", revenue: 54000 },
-      { month: "Apr", revenue: 60000 },
-      { month: "May", revenue: 65000 },
-      { month: "Jun", revenue: 73000 },
-      { month: "Jul", revenue: 77000 },
-      { month: "Aug", revenue: 82000 },
-      { month: "Sep", revenue: 86000 },
-      { month: "Oct", revenue: 81000 },
-      { month: "Nov", revenue: 88000 },
-      { month: "Dec", revenue: 90000 },
-      { month: "Jan", revenue: 94000 },
-    ],
-  },
+// "2026-01" -> "Jan"
+const formatMonthLabel = (month: string) => {
+  const [, m] = month.split("-");
+  const idx = Number(m) - 1;
+  return monthNames[idx] ?? month;
 };
 
-export default function RevenueChart() {
+export default function RevenueChart({ revenueSummary, loading = false }: RevenueChartProps) {
   const [period, setPeriod] = useState("ytd");
-  // const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const monthlySeries = revenueSummary?.monthlySeries ?? [];
 
-const currentData = revenueData[selectedYear] ?? revenueData[2026];
-const years = Object.keys(revenueData)
-  .map(Number)
-  .sort((a, b) => b - a);
-const chartData =
-  period === "ytd"
-    ? currentData.ytd
-    : currentData.months12;
+  // API ke monthlySeries me jo bhi years mile hain unhi se dropdown banate hain
+  // (koi hardcoded/fake year list nahi — jitna data hai utna hi dikhta hai)
+  const years = useMemo(() => {
+    const uniqueYears = Array.from(
+      new Set(monthlySeries.map((item) => item.month.split("-")[0]))
+    ).sort((a, b) => Number(b) - Number(a));
+    return uniqueYears;
+  }, [monthlySeries]);
+
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const activeYear = selectedYear || years[0] || "";
+
+  const yearFiltered = monthlySeries.filter((item) => item.month.startsWith(activeYear));
+
+  // Note: backend abhi sirf ek "period" (ytd) return karti hai — jab "Last 12 months" ke liye
+  // alag data API se aane lage to yahan sirf ek line change karni hogi (period ke hisaab se
+  // alag series select kar lena). Tab tak dono toggle same saal ka data dikhate hain.
+  const chartData = yearFiltered.map((item) => ({
+    month: formatMonthLabel(item.month),
+    revenue: item.revenue,
+  }));
+
+  const total = revenueSummary?.total ?? 0;
+  const yoy = revenueSummary?.yoyPercent;
 
   return (
     <div className="bg-white rounded-[5px] border border-(--border-gray-2) shadow-sm">
@@ -154,33 +78,40 @@ const chartData =
             ]}
           />
 
-     <select
-  value={selectedYear}
-  onChange={(e) => setSelectedYear(Number(e.target.value))}
-  className="rounded px-3 py-1.5 outline-none border border-(--border-gray-2) text-sm"
->
-  {years.map((year) => (
-    <option key={year} value={year}>
-      {year}
-    </option>
-  ))}
-</select>
+          <select
+            value={activeYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="rounded px-3 py-1.5 outline-none border border-(--border-gray-2) text-sm"
+          >
+            {years.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="mt-6 px-4">
         <h2 className="text-base font-bold font-archivo">
-          $
-          {chartData
-            .reduce((acc, item) => acc + item.revenue, 0)
-            .toLocaleString()}
+          ${total.toLocaleString()}
         </h2>
 
         <p className="font-medium text-xs font-archivo">
-          <span className="text-green font-medium text-xs">+40%</span>
-          <span className="text-(--color-gray-text)! font-normal ml-1">
-            increased from last year
-          </span>
+          {yoy !== null && yoy !== undefined ? (
+            <>
+              <span className={`font-medium text-xs ${yoy >= 0 ? "text-green" : "text-red-500"}`}>
+                {yoy >= 0 ? "+" : ""}{yoy}%
+              </span>
+              <span className="text-(--color-gray-text)! font-normal ml-1">
+                increased from last year
+              </span>
+            </>
+          ) : (
+            <span className="text-(--color-gray-text)! font-normal">
+              No year-over-year data yet
+            </span>
+          )}
         </p>
       </div>
 
@@ -192,40 +123,48 @@ const chartData =
       </div>
 
       <div className="h-[280px] mt-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
-            <defs>
-              <linearGradient
-                id="revenueGradient"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop offset="0%" stopColor="#395FA6" />
-                <stop offset="100%" stopColor="#122F68" />
-              </linearGradient>
-            </defs>
+        {loading ? (
+          <div className="h-full w-full animate-pulse bg-gray-50" />
+        ) : chartData.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-sm text-[#6B7280]">
+            No revenue data yet
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <defs>
+                <linearGradient
+                  id="revenueGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor="#395FA6" />
+                  <stop offset="100%" stopColor="#122F68" />
+                </linearGradient>
+              </defs>
 
-            <XAxis dataKey="month" axisLine={false} tickLine={false} className="text-xs" style={{fontSize:'12px'}} />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} className="text-xs" style={{fontSize:'12px'}} />
 
-            <YAxis
-              tickFormatter={(value) => `${value / 1000}K`}
-              axisLine={false}
-              tickLine={false}
-              style={{fontSize:'12px'}}
-            />
+              <YAxis
+                tickFormatter={(value) => `${value / 1000}K`}
+                axisLine={false}
+                tickLine={false}
+                style={{fontSize:'12px'}}
+              />
 
-            <Tooltip />
+              <Tooltip />
 
-            <Bar
-              dataKey="revenue"
-              fill="url(#revenueGradient)"
-              radius={[6, 6, 0, 0]}
-              barSize={21}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+              <Bar
+                dataKey="revenue"
+                fill="url(#revenueGradient)"
+                radius={[6, 6, 0, 0]}
+                barSize={21}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
