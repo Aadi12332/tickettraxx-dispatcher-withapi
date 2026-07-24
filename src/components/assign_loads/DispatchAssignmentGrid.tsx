@@ -11,9 +11,6 @@ const modules = [AllCommunityModule];
 import DriverTooltip from "./DriverTooltip";
 import { Tooltip } from "@mui/material";
 
-import { useAppSelector } from "../../store";
-import { selectJobHeaders } from "../../store/dispatchSlice";
-
 const LOAD_COLOR_MAP: Record<number, string> = {
   1: "#FDE68A", // yellow
   2: "#FBBF24", // halka dark yellow
@@ -21,6 +18,7 @@ const LOAD_COLOR_MAP: Record<number, string> = {
   4: "#86EFAC", // light green
   5: "#15803D", // dark green
 };
+
 
 const JobCell = (
   params: ICellRendererParams & { occurrencesBefore?: number; jobId?: string },
@@ -30,7 +28,8 @@ const JobCell = (
   const value =
     typeof params.value === "object" ? params.value?.loads : params.value;
 
-  if (!value) return null;
+  if (value === undefined || value === null)
+    return null;
 
   const isSummaryRow =
     params.data?.rowType === "total" || params.data?.rowType === "remaining";
@@ -100,13 +99,10 @@ const JobCell = (
   return (
     <div
       onClick={handleCellClick}
-      className={`flex items-center justify-center w-full h-full ${
-        canClickToCancel ? "cursor-pointer" : ""
-      }`}
+      className={`flex items-center justify-center w-full h-full ${canClickToCancel ? "cursor-pointer" : ""
+        }`}
     >
-      <span
-        style={{ color: textColor, fontWeight: isBold ? 600 : undefined }}
-      >
+      <span style={{ color: textColor, fontWeight: isBold ? 600 : undefined }}>
         {params.value}
       </span>
     </div>
@@ -146,7 +142,9 @@ const JobCell = (
 // };
 const DriverRenderer = (props: any) => {
   // const truckId = props.data?.truckId;
-  const canOpenTooltip = props.data.truckId.length > 1;
+  const canOpenTooltip =
+    Array.isArray(props.data?.truckId) &&
+    props.data.truckId.length > 1;
 
   return (
     <button
@@ -180,85 +178,49 @@ const DispatchAssignmentGrid = ({
   onOpenCancelDrawer,
   onRowClicked,
   buttonStatus,
-  selectedDay,
   rowData,
   setRowData,
   originalRowData,
   handleUpdate,
   customHeight,
+  jobHeaders,
+  footer,
+  matrixData,
   enableColumnResize = true,
 }: any) => {
-  const jobHeaders = useAppSelector(selectJobHeaders);
+  console.log(footer)
+  // const jobHeaders = useAppSelector(selectJobHeaders);
   const [driverPopup, setDriverPopup] = useState<any>(null);
 
   const pinnedBottomRowData = useMemo(() => {
-    const totalJobs = jobHeaders.map((job, index) => {
-      const occurrencesBefore = jobHeaders
-        .slice(0, index)
-        .filter((h) => h === job).length;
-      const sum = rowData?.reduce((acc: any, row: { jobs: any }) => {
-        const matchingJobs = (row.jobs || []).filter((j: any) => j.id === job);
-        return acc + (matchingJobs[occurrencesBefore]?.loads || 0);
-      }, 0);
-      return { id: job, loads: sum };
-    });
+    if (!jobHeaders) return [];
+    const totalJobs = jobHeaders?.map((job: string, index: number) => ({
+      id: job,
+      loads: matrixData?.columns?.[index]?.totalAssigned ?? 0,
+    }));
 
-    let sumTonnage = 0;
-    let sumTotal = 0;
-    rowData?.forEach((row: { tonnage: any; total: any }) => {
-      const ton = parseFloat(String(row.tonnage).replace(/[^0-9.-]+/g, ""));
-      if (!isNaN(ton)) sumTonnage += ton;
+    const remainingJobs = jobHeaders?.map((job: string, index: number) => ({
+      id: job,
+      loads: matrixData?.columns?.[index]?.remaining ?? 0,
+    }));
 
-      const tot = parseFloat(String(row.total).replace(/[^0-9.-]+/g, ""));
-      if (!isNaN(tot)) sumTotal += tot;
-    });
-
-    const formatCurrency = (val: number) => {
-      return (
-        (val < 0 ? "-$" : "$") +
-        Math.abs(val).toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      );
-    };
-
-    const totalsRow = {
-      truckId: "Total",
-      rowType: "total",
-      jobs: totalJobs,
-      tonnage: formatCurrency(sumTonnage),
-      total: formatCurrency(sumTotal),
-    };
-
-    const targetLoads = [40, 30, 3, 30, 25, 25, 25, 25, 25];
-    const targetTonnage = -850.5;
-    const targetTotalSum = -22260.01;
-
-    let offset = 0;
-    if (selectedDay) {
-      offset = selectedDay.charCodeAt(selectedDay.length - 1) % 5;
-    }
-
-    const remainingJobs = jobHeaders.map((job, index) => {
-      const sum = totalJobs[index].loads;
-      let target = targetLoads[index];
-      if (index === 0) target += offset * 14;
-      else if (index === 1) target += (offset * 14) % 2;
-
-      return { id: job, loads: target - sum };
-    });
-
-    const remainingRow = {
-      truckId: "Remaining",
-      rowType: "remaining",
-      jobs: remainingJobs,
-      tonnage: formatCurrency(targetTonnage - sumTonnage),
-      total: formatCurrency(targetTotalSum - sumTotal),
-    };
-
-    return [totalsRow, remainingRow];
-  }, [rowData, selectedDay]);
+    return [
+      {
+        truckId: "Total",
+        rowType: "total",
+        jobs: totalJobs,
+        tonnage: footer?.grandTonnage,
+        total: footer?.grandTotal,
+      },
+      {
+        truckId: "Remaining",
+        rowType: "remaining",
+        jobs: remainingJobs,
+        tonnage: 0,
+        total: 0,
+      },
+    ];
+  }, [footer, jobHeaders, matrixData]);
   const defaultColDef = useMemo(
     () => ({
       cellStyle: (params: any) => {
@@ -431,10 +393,10 @@ const DispatchAssignmentGrid = ({
           </Tooltip>
         ),
       },
-      ...jobHeaders.map((job, index) => {
+      ...(jobHeaders ?? []).map((job: string, index: number) => {
         const occurrencesBefore = jobHeaders
           .slice(0, index)
-          .filter((h) => h === job).length;
+          .filter((h:any) => h === job).length;
 
         const getCurrentJobEntry = (data: any) => {
           if (!data?.jobs) return null;
@@ -446,12 +408,11 @@ const DispatchAssignmentGrid = ({
           headerName: `#${job}`,
           field: `jobs.${index}`,
           headerComponent: () => {
-            const dispatches = useAppSelector(
-              (state) => state.dispatch.dispatches,
+            const column = matrixData?.columns?.find(
+              (x: any) => x.poCode === job,
             );
-            const dispatchItem = dispatches.find((d) => d.poCode === job);
 
-            const location = dispatchItem?.location ?? "";
+            const location = column?.location ?? "";
 
             return (
               <Tooltip
@@ -499,7 +460,7 @@ const DispatchAssignmentGrid = ({
           cellRenderer: JobCell,
           cellRendererParams: {
             occurrencesBefore,
-            jobId: job,
+            jobId: matrixData?.columns?.[index]?.poCode,
           },
           editable: (params: any) => {
             if (!enableColumnResize) return false;
@@ -641,7 +602,13 @@ const DispatchAssignmentGrid = ({
       //   // pinned: "right",
       // },
     ],
-    [],
+    [
+      jobHeaders,
+      matrixData,
+      rowData,
+      setRowData,
+      enableColumnResize,
+    ],
   );
 
   const gridRef = useRef<AgGridReact>(null);

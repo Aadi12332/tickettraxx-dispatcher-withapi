@@ -1,26 +1,31 @@
 import { Modal } from "@mui/material";
 import { X, Plus } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import DispatchAssignmentGrid from "../DispatchAssignmentGrid";
 import CancelRerouteDrawer from "../CancelRerouteDrawer";
 import EditDispatchModal from "./EditDispatchModal";
 import AssignLoadCard from "../AssignLoadCard";
 import CommonButton from "../../common/CommonButton";
 import { useAppDispatch, useAppSelector } from "../../../store";
-import { setRowData, selectLoadCards, type AssignLoadCardData } from "../../../store/dispatchSlice";
+import { setRowData, selectLoadCards, type AssignLoadCardData, setOriginalRowData } from "../../../store/dispatchSlice";
 import SuccessActionModal from "../SuccessActionModal";
+import { getAssignmentMatrixApi } from "../../../services/auth.service";
+import { mapMatrixColumnToCard } from "../../../pages/assign_loads/AssignLoadsPage";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   loadCards?: any[];
   isCanceled?: boolean;
+  date?: any;
+  setDate?: (date: any) => void;
 }
 
 const AssignLoadsExpandModal = ({
   open,
   onClose,
   isCanceled,
+  date
 }: Props) => {
 
 const [successModal, setSuccessModal] = useState({
@@ -31,7 +36,10 @@ const [successModal, setSuccessModal] = useState({
   const [showEditModal, setShowEditModal] = useState(false);
   const [openModal, setOpenModal] = useState(false);
   const [buttonStatus] = useState(false);
-
+  const [cardsLoading, setCardsLoading] = useState(false);
+  const [assignmentCards, setAssignmentCards] = useState<AssignLoadCardData[]>([]);
+  const [matrixData, setMatrixData] = useState<any>(null);
+  const [footer, setFooter] = useState<any>(null);
   const dispatch = useAppDispatch();
   const selectedDay = useAppSelector((state) => state.dispatch.selectedDay);
   const loadCardsFromRedux = useAppSelector(selectLoadCards);
@@ -70,6 +78,48 @@ const [successModal, setSuccessModal] = useState({
   }, 3000);
 };
 
+ const loadAssignments = async () => {
+    setCardsLoading(true);
+    try {
+      const res = await getAssignmentMatrixApi(date);
+      console.log("Assignment Matrix API Response:", res);
+      setMatrixData(res.data?.data);
+      setFooter(res.data?.footer);
+
+      setAssignmentCards(res.data?.data?.columns.map(mapMatrixColumnToCard));
+      const rows = res.data?.data?.rows.map((row: any) => ({
+        driver: row.driver,
+        truckId: row.truckId,
+        tonnage: row.tonnage,
+        total: row.total,
+        status: row.status,
+        weCall: row.weCall,
+
+        jobs: row.jobs.map((job: any) => {
+          const column = res.data?.data?.columns.find(
+            (c: any) => c.id === job.id
+          );
+
+          return {
+            ...job,
+            id: column?.poCode ?? job.id,
+          };
+        }),
+      }));
+
+      dispatch(setRowData(rows));
+      dispatch(setOriginalRowData(JSON.parse(JSON.stringify(rows))));
+    } catch (err) {
+      console.error("Failed to load assignments:", err);
+    } finally {
+      setCardsLoading(false);
+    }
+  };
+console.log({cardsLoading, assignmentCards, matrixData, footer, rowData, originalRowData});
+  useEffect(() => {
+    loadAssignments();
+  }, [date]);
+
   return (
     <>
       <Modal
@@ -88,7 +138,7 @@ const [successModal, setSuccessModal] = useState({
               <div className="flex items-center gap-3">
                 <h2 className="md:text-xl text-base font-medium text-[#2F2F2F]">
                   Dispatch Details for 
-                  <span className="font-bold ml-1">2026-06-03</span>
+                  <span className="font-bold ml-1">{date??new Date().toISOString().split("T")[0]}</span>
                 </h2>
               </div>
 
@@ -170,6 +220,9 @@ const [successModal, setSuccessModal] = useState({
                     onRowClicked={() => {}}
                     customHeight="h-[calc(100vh-95px)]"
                     enableColumnResize={false}
+                    jobHeaders={matrixData?.columns?.map((x: any) => x.poCode) || []}
+        footer={matrixData?.footer}
+        matrixData={matrixData}
                   />
                 </div>
               </div>

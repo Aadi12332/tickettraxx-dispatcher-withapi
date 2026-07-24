@@ -59,7 +59,8 @@ const Dispatch = () => {
   const [dispatchModal, setDispatchModal] = useState<
     "none" | "create" | "edit"
   >("none");
-
+  const [date,setDate] = useState<any | null>(null);
+const [selectedDispatchId, setSelectedDispatchId] = useState<string | null>(null);
   const [openPickupModal, setOpenPickupModal] = useState(false);
   // const [showEditModal, setShowEditModal] = useState(false);
   const [showDispatchDetails, setShowDispatchDetails] = useState(false);
@@ -93,6 +94,7 @@ const Dispatch = () => {
   };
 
   const handleOnView = (item: DispatchItem) => {
+    setDate(item.date);
     setIsCanceled(item.status !== "Active");
     setShowDispatchDetails(true);
   };
@@ -193,7 +195,6 @@ const Dispatch = () => {
       }
     }
   };
-
   useEffect(() => {
     loadDispatches();
     loadDispatches(pagination.page);
@@ -270,9 +271,10 @@ const Dispatch = () => {
             loadDispatches(page);
           }}
           onView={(item) => handleOnView(item)}
-          onEdit={() => {
-            setDispatchModal("edit");
-          }}
+            onEdit={(item) => {
+    setSelectedDispatchId(item._id);
+    setDispatchModal("edit");
+  }}
           onCopy={() => {}}
         />
 
@@ -292,12 +294,13 @@ const Dispatch = () => {
         </div>
       </div>
 
-      <EditDispatchModal
-        open={dispatchModal === "edit"}
-        onClose={() => setDispatchModal("none")}
-        isEdit
-        onOpenPickupModal={handleOpenPickupModal}
-      />
+<EditDispatchModal
+  open={dispatchModal === "edit"}
+  onClose={() => setDispatchModal("none")}
+  isEdit
+  dispatchId={selectedDispatchId}
+  onOpenPickupModal={handleOpenPickupModal}
+/>
 
       <EditDispatchModal
         open={dispatchModal === "create"}
@@ -319,6 +322,8 @@ const Dispatch = () => {
         open={showDispatchDetails}
         onClose={() => setShowDispatchDetails(false)}
         isCanceled={isCanceled}
+        date={date}
+        setDate={setDate}
       />
     </div>
   );

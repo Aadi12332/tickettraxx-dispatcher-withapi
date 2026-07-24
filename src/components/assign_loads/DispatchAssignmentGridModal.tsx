@@ -12,7 +12,10 @@ interface Props {
   rowData: any[];
   setRowData: React.Dispatch<React.SetStateAction<any[]>>;
   originalRowData: any[];
-  handleUpdate:any
+  handleUpdate: () => void;
+  jobHeaders?: any[];
+  footer?: any;
+  matrixData?: any;
 }
 
 const DispatchAssignmentGridModal = ({
@@ -25,7 +28,10 @@ const DispatchAssignmentGridModal = ({
   rowData,
   setRowData,
   originalRowData,
-  handleUpdate
+  handleUpdate,
+  jobHeaders,
+  footer,
+  matrixData,
 }: Props) => {
   return (
     <Modal open={open} onClose={onClose}>
@@ -58,6 +64,9 @@ const DispatchAssignmentGridModal = ({
                 originalRowData={originalRowData}
                 handleUpdate={handleUpdate}
                 customHeight="h-[calc(100vh-65px)]"
+                jobHeaders={jobHeaders}
+                footer={footer}
+                matrixData={matrixData}
               />
             </div>
           </div>

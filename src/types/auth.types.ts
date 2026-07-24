@@ -47,9 +47,6 @@ export interface VerifyOtpPayload {
   purpose: OtpPurpose;
 }
 
-// Backend response shape changes with purpose:
-// - "login" purpose returns full login tokens + user
-// - "reset" purpose just confirms the code is valid
 export interface VerifyOtpResponse {
   verified?: boolean;
   accessToken?: string;
@@ -67,7 +64,6 @@ export interface ResetPasswordResponse {
   reset: boolean;
 }
 
-// Generic API error shape jo axios interceptor se throw hoga
 export interface ApiError {
   message: string;
   status?: number;
@@ -125,7 +121,6 @@ export interface DispatchTableProps {
   totalItems: number;
   pageSize: number;
   onPageChange: (page: number) => void;
-
   onView?: (item: DispatchItem) => void;
   onEdit?: (item: DispatchItem) => void;
   onCopy?: (item: DispatchItem) => void;
@@ -192,6 +187,7 @@ export interface CustomerListResponse {
   data: Customer[];
   pagination: CustomerPagination;
 }
+
 export interface Fsc {
   _id: string;
   customerId: Customer | string;
@@ -295,116 +291,17 @@ export interface SiteResponse {
   data: Site;
 }
 
-export interface Contractor {
-  _id: string;
-  companyName: string;
-  name: string;
-  contractorCode?: string;
-  primaryDriverName: string;
-  parkingLocation?: string;
-  unitNumber: string;
-  phone: string;
-  email: string;
-  address?: string;
-  zipCode?: string;
-  state?: string;
-  city?: string;
-  signatureDate?: string;
-  expirationDate?: string;
-  idType?: string;
-  idNumber?: string;
-  contactName?: string;
-  autoSendRenewalReminders?: boolean;
-
-  usdotNumber?: string;
-txdotNumber?: string;
-  ownerOperatorOrFleet?: string;
-  payPercent?: string;
-  trucks?: string;
-  truckCount?: string;
-  phoneCode?: string;
-contractDocument?: {
-  storageKey: string;
-  url: string;
-};
-
-coiDocument?: {
-  storageKey: string;
-  url: string;
-};
-
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ContractorPagination {
-  page: number;
-  limit: number;
-  total: number;
-  pages: number;
-}
-
-export interface ContractorListResponse {
-  data: Contractor[];
-  pagination: ContractorPagination;
-}
-
-interface UploadedFile {
-  name: string;
-  url: string;
-}
-
-export interface ContractorPayload {
-  companyName: string;
-  primaryDriverName: string;
-  unitNumber: string;
-  phone: string;
-  email: string;
-  parkingLocation?: string;
-  zipCode?: string;
-  state?: string;
-  city?: string;
-  signatureDate?: string;
-  expirationDate?: string;
-  address?: string;
-  idType?: string;
-  idNumber?: string;
-  contactName?: string;
-  autoSendRenewalReminders?: boolean;
-  usdotNumber?: string;
-txdotNumber?: string;
-  ownerOperatorOrFleet?: string;
-  payPercent?: string;
-  trucks?: string;
-  truckCount?: string;
-  phoneCode?: string;
-  status?: string;
-  contractFile?: UploadedFile;
-  coiFile?: UploadedFile;
-}
-
-export interface ContractorResponse {
-  data: Contractor;
-}
-
 export interface Job {
   _id: string;
   code: string;
-
   customerId: Customer | string;
   thirdPartyCustomerId: Customer | string | null;
-
   pickupSiteId: Site | string;
   deliverySiteId: Site | string;
-
   materialId: Material | string | null;
-
   rate: number;
   contractorRate?: number;
-
   date?: string;
-
   totalLoads: number;
   status: string;
   createdAt: string;
@@ -421,18 +318,6 @@ export interface JobPagination {
 export interface JobListResponse {
   data: Job[];
   pagination: JobPagination;
-}
-
-export interface CreateJobPayload {
-  code: string;
-  customerId: string;
-  pickupSiteId: string;
-  deliverySiteId: string;
-  materialId?: string;
-  thirdPartyCustomerId?: string;
-  rate: number;
-  contractorRate?: number;
-  date: string;
 }
 
 export interface UpdateJobPayload {
@@ -469,7 +354,7 @@ export interface RevenueChartPoint {
 }
 
 export interface RevenueMonthPoint {
-  month: string; // "2026-01"
+  month: string;
   revenue: number;
 }
 
@@ -520,6 +405,184 @@ export interface DispatcherDashboardResponse {
   data: DispatcherDashboard;
 }
 
+export interface DriverAccess {
+  app: boolean;
+  fsc: boolean;
+  earning: boolean;
+}
+
+export interface ContractorDriver {
+  _id: string;
+  name: string;
+  driverCode?: string;
+  userId: string | null;
+  contractorId: string;
+  type: string;
+  phone?: string;
+  email?: string;
+  state?: string;
+  city?: string;
+  address?: string;
+  dob: string | null;
+  payPercent?: number;
+  rate?: number;
+  paymentType?: string;
+  access: DriverAccess;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  jobsCount: number;
+  unitNumber: string | null;
+}
+
+export interface ContractorTruck {
+  truckName: string;
+  _id: string;
+  unitNumber: string;
+  alias: string[];
+  contractorId: string;
+  assignedDriverId: string | null;
+  loadThisMonth: number;
+  status: string;
+  nextMaintenanceDueAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignedFromDate?: string;
+  operationalStatus: string;
+}
+
+export interface ContractorRecentJob {
+  _id: string;
+  loadNo: string;
+  customerId: { _id: string; name: string; code: string } | null;
+  contractorId: string;
+  jobId: string | null;
+  dispatchId: string | null;
+  date: string;
+  numberOfTrips: number;
+  invoiceRate: number;
+  contractorRate: number;
+  pickupSiteId: string | null;
+  deliverySiteId: string | null;
+  materialId: string | null;
+  weightPerTrip: number;
+  status: string;
+  eta: string | null;
+  miles: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface UploadedFile {
+  name?: string;
+  storageKey?: string;
+  url: string;
+}
+
+// SINGLE merged Contractor type (aapki file me 2 alag definitions thi — consolidate kar diya).
+// NOTE: do naming variants mile the: usdot/usdotNumber, ownerOperatorFleet/ownerOperatorOrFleet,
+// payPercentage/payPercent. Dono ko optional rakha hai taaki kuch break na ho — apni actual
+// API response check karke jo naam sahi hai wahi rakhna, doosra hata dena.
+export interface Contractor {
+  _id: string;
+  companyName: string;
+  name?: string;
+  contractorCode?: string;
+  primaryDriverName?: string;
+  parkingLocation?: string;
+  unitNumber?: string;
+  phone: string;
+  email: string;
+  address?: string;
+  zipCode?: string;
+  state?: string;
+  city?: string;
+  signatureDate?: string | null;
+  expirationDate?: string | null;
+  idType?: string;
+  idNumber?: string;
+  contactName?: string;
+  autoSendRenewalReminders?: boolean;
+
+  usdot?: string;
+  usdotNumber?: string;
+  txdot?: string;
+  txdotNumber?: string;
+  ownerOperatorFleet?: string;
+  ownerOperatorOrFleet?: string;
+  payPercentage?: string;
+  payPercent?: string;
+  // trucks?: string;
+  truckCount?: string;
+  phoneCode?: string;
+
+  contractDocument?: UploadedFile;
+  coiDocument?: UploadedFile;
+
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContractorDetail extends Contractor {
+  drivers: ContractorDriver[];
+  trucks: ContractorTruck[];
+  jobsTotal: number;
+  recentJobs: ContractorRecentJob[];
+}
+
+export interface ContractorPagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export interface ContractorListResponse {
+  data: Contractor[];
+  pagination: ContractorPagination;
+}
+
+export interface ContractorDetailResponse {
+  data: ContractorDetail;
+}
+
+// Create/update JSON payload — files ke liye alag se uploadContractorFilesApi use karo
+export interface ContractorPayload {
+  companyName: string;
+  primaryDriverName: string;
+  unitNumber: string;
+  phone: string;
+  email: string;
+  parkingLocation?: string;
+  zipCode?: string;
+  state?: string;
+  city?: string;
+  signatureDate?: string;
+  expirationDate?: string;
+  address?: string;
+  idType?: string;
+  idNumber?: string;
+  contactName?: string;
+  autoSendRenewalReminders?: boolean;
+  usdot?: string;
+  usdotNumber?: string;
+  txdot?: string;
+  txdotNumber?: string;
+  ownerOperatorFleet?: string;
+  ownerOperatorOrFleet?: string;
+  payPercentage?: string;
+  payPercent?: string;
+  trucks?: string;
+  truckCount?: string;
+  phoneCode?: string;
+  status?: string;
+}
+
+export interface ContractorResponse {
+  data: Contractor;
+}
+
 export interface Load {
   _id: string;
   loadNo: string;
@@ -536,7 +599,6 @@ export interface Load {
   pickupSiteId: Site | string;
   deliverySiteId: Site | string;
   materialId: Material | string;
-  // weightPerTrip: number;
   status: string;
   eta: string | null;
   miles: number | null;
@@ -566,7 +628,6 @@ export interface CreateLoadPayload {
   numberOfTrips: number;
   invoiceRate: number;
   contractorRate: number;
-  // weightPerTrip: number;
   startTime: string;
   endTime: string;
   comment?: string;
@@ -582,7 +643,6 @@ export interface UpdateLoadPayload {
   numberOfTrips?: number;
   invoiceRate?: number;
   contractorRate?: number;
-  // weightPerTrip?: number;
   startTime?: string;
   endTime?: string;
   comment?: string;
@@ -591,4 +651,137 @@ export interface UpdateLoadPayload {
 
 export interface LoadResponse {
   data: Load;
+}
+
+export interface Driver {
+  _id: string;
+  name: string;
+  contractorId: string;
+  state?: string;
+  city?: string;
+  address?: string;
+  parkingLocation?: string;
+  phone?: string;
+  email?: string;
+  medicalCardUrl?: string;
+  cdlUrl?: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DriverResponse {
+  data: Driver;
+}
+
+export interface Truck {
+  _id: string;
+  unitNumber: string;
+  contractorId: string;
+  assignedDriverId?: string | null;
+  alias?: string;
+  truckName?: string;
+  year?: string;
+  vinNumber?: string;
+  dotInspectionUrl?: string;
+  operationalStatus: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TruckResponse {
+  data: Truck;
+}
+
+// Job payload me contractorRate, date, weightPerTrip bhi lagte hain (add-job curl ke mutabik)
+export interface CreateJobPayload {
+  code: string;
+  customerId: string;
+  pickupSiteId: string;
+  deliverySiteId: string;
+  materialId?: string;
+  thirdPartyCustomerId?: string;
+  rate: number;
+  contractorRate?: number;
+  date?: string;
+  weightPerTrip?: number;
+}
+
+export interface Truck {
+  _id: string;
+  unitNumber: string;
+  contractorId: string;
+  assignedDriverId?: string | null;
+  truckName?: string;
+  year?: string;
+  vinNumber?: string;
+  operationalStatus: string;
+}
+
+export interface TruckPagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export interface TruckListResponse {
+  data: Truck[];
+  pagination: TruckPagination;
+}
+
+export interface AssignmentLoad {
+  _id: string;
+  loadNo: string;
+  customerId?: { _id: string; name: string; code?: string } | null;
+  pickupSiteId?: { _id: string; name: string; address?: string } | null;
+  deliverySiteId?: { _id: string; name: string; address?: string } | null;
+  materialId?: { _id: string; name: string } | null;
+  invoiceRate?: number;
+  weightPerTrip?: number;
+  startTime?: string;
+  endTime?: string;
+  status: string;
+}
+
+export interface Assignment {
+  _id: string;
+  driverId?: { _id: string; name: string; phone?: string } | null;
+  truckId?: { _id: string; unitNumber: string; status?: string } | null;
+  contractorId?: { _id: string; companyName: string } | null;
+  loadId?: AssignmentLoad | null;
+  date: string;
+  loadsCount: number;
+  status: string;
+}
+
+export interface AssignmentSummary {
+  loads: number;
+  rate: number | null;
+  jobId: string | null;
+  customerId: string;
+  deliverySite?: string;
+  jobCode?: string;
+}
+
+export interface AssignmentListResponse {
+  data: Assignment[];
+  summary: AssignmentSummary[];
+}
+
+export interface DispatchRecord {
+  _id: string;
+  date: string;
+  status: string;
+  grandTotal: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDispatchPayload {
+  date: string;
+}
+
+export interface DispatchResponse {
+  data: DispatchRecord;
 }

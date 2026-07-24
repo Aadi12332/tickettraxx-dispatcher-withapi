@@ -59,6 +59,8 @@ const POCode = () => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(false);
 
+  console.log(siteMap, loading)
+
   const loadSites = useCallback(async () => {
     const [pickupRes, deliverRes] = await Promise.all([
       siteService.getSites({ type: "pickup", limit: 100 }),

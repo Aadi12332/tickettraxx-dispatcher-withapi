@@ -7,10 +7,14 @@ import { useNavigate } from "react-router-dom";
 import CreatePickupModal from "../../pickup/modal/CreatePickupModal";
 import {
   getJobsApi,
+  getMaterialsApi,
   createLoadApi,
+  createDispatchApi,
   siteService,
+  getLoadsByDispatchIdApi,
 } from "../../../services/auth.service";
 import type { Job, CreateLoadPayload } from "../../../types/auth.types";
+import dayjs from "dayjs";
 
 interface EditDispatchModalProps {
   open: boolean;
@@ -19,9 +23,8 @@ interface EditDispatchModalProps {
   description?: string;
   isEdit?: boolean;
   onOpenPickupModal?: () => void;
-  /** Required to create a Load against an existing dispatch. */
-  dispatchId?: string;
   onSuccess?: () => void;
+  dispatchId?: string | null;
 }
 
 const initialFormData = {
@@ -30,7 +33,6 @@ const initialFormData = {
   poCode: "", // holds jobId
   material: "",
   loads: "",
-  // weightPerTrip: "",
   invoiceRate: "",
   contractorRate: "",
   pickup: "",
@@ -61,25 +63,64 @@ const EditDispatchModal = ({
   description,
   isEdit,
   onOpenPickupModal,
-  dispatchId,
   onSuccess,
+  dispatchId: editDispatchId,
 }: EditDispatchModalProps) => {
   const [columns, setColumns] = useState<number[]>(isEdit ? [1] : []);
   const [formData, setFormData] = useState(initialFormData);
   const [openPickupModal, setOpenPickupModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Dispatch that gets created the moment a date is picked
+  const [dispatchId, setDispatchId] = useState<string | null>(null);
+  const [creatingDispatch, setCreatingDispatch] = useState(false);
+  const [dispatchError, setDispatchError] = useState("");
+
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [siteMap, setSiteMap] = useState<Record<string, string>>({});
   const [optionsLoading, setOptionsLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  const loadDispatch = async (dispatchId: string) => {
+    const res = await getLoadsByDispatchIdApi(dispatchId);
+
+    const load = res.data[0];
+
+    setFormData({
+      dispatchDate: dayjs(load.createdAt).format("YYYY-MM-DD"),
+      customer: resolveId(load.customerId),
+      poCode: resolveId(load.jobId),
+      material: resolveId(load.materialId),
+      loads: String(load.numberOfTrips),
+      invoiceRate: String(load.invoiceRate),
+      contractorRate: String(load.contractorRate),
+      pickup: resolveId(load.pickupSiteId),
+      deliver: resolveId(load.deliverySiteId),
+      startTime: load.startTime,
+      endTime: load.endTime,
+      comment: load.comment ?? "",
+    });
+
+    setColumns([1]);
+  };
+
+  useEffect(() => {
+    if (!open || !isEdit || !editDispatchId) return;
+
+    console.log("Calling API", editDispatchId);
+
+    loadDispatch(editDispatchId);
+  }, [open, isEdit, editDispatchId]);
 
   useEffect(() => {
     if (!open) return;
 
     setFormData(initialFormData);
     setColumns(isEdit ? [1] : []);
+    setDispatchId(null);
+    setDispatchError("");
   }, [open, isEdit]);
 
   useEffect(() => {
@@ -88,13 +129,16 @@ const EditDispatchModal = ({
     const loadOptions = async () => {
       setOptionsLoading(true);
       try {
-        const [jobsRes, pickupRes, deliverRes] = await Promise.all([
-          getJobsApi(1, 100),
-          siteService.getSites({ type: "pickup", limit: 100 }),
-          siteService.getSites({ type: "deliver", limit: 100 }),
-        ]);
+        const [jobsRes, pickupRes, deliverRes, materialsRes] =
+          await Promise.all([
+            getJobsApi(1, 100),
+            getMaterialsApi(1, 100),
+            siteService.getSites({ type: "pickup", limit: 100 }),
+            siteService.getSites({ type: "deliver", limit: 100 }),
+          ]);
 
         setJobs(jobsRes.data);
+        setMaterials(materialsRes.data);
 
         const map: Record<string, string> = {};
         [...pickupRes.data, ...deliverRes.data].forEach((site) => {
@@ -130,11 +174,32 @@ const EditDispatchModal = ({
     onClose();
   };
 
-  const handleDispatchDateChange = (value: string) => {
+  // Date select hote hi Dispatch create karo, uska _id state me rakho,
+  // aur tabhi columns kholo.
+  const handleDispatchDateChange = async (value: string) => {
     setFormData((prev) => ({ ...prev, dispatchDate: value }));
 
-    if (columns.length === 0 && value) {
+    if (!value) {
+      setDispatchId(null);
+      setColumns([]);
+      return;
+    }
+
+    setDispatchError("");
+    setCreatingDispatch(true);
+    try {
+      const res = await createDispatchApi({ date: value });
+      setDispatchId(res.data._id);
       setColumns([1]);
+    } catch (err) {
+      console.error("Failed to create dispatch:", err);
+      setDispatchError(
+        "Failed to create dispatch for this date. Please try again.",
+      );
+      setDispatchId(null);
+      setColumns([]);
+    } finally {
+      setCreatingDispatch(false);
     }
   };
 
@@ -147,10 +212,15 @@ const EditDispatchModal = ({
           ...prev,
           poCode: value,
           customer: resolveId(job.customerId),
-          material: resolveId(job.materialId),
+         material:
+  typeof job.materialId === "object" && job.materialId
+    ? job.materialId._id
+    : "",
           pickup: resolveId(job.pickupSiteId),
           deliver: resolveId(job.deliverySiteId),
           invoiceRate: String(job.rate ?? ""),
+          contractorRate: String(job.contractorRate ?? ""),
+          loads: String(job.totalLoads ?? ""),
         }));
       } else {
         setFormData((prev) => ({ ...prev, poCode: value }));
@@ -162,13 +232,25 @@ const EditDispatchModal = ({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const materialOptionsForSelectedJob = useMemo(() => {
-    const job = jobs.find((j) => j._id === formData.poCode);
-    if (job && typeof job.materialId === "object" && job.materialId) {
-      return [{ label: job.materialId.name, value: job.materialId._id }];
-    }
-    return [];
-  }, [jobs, formData.poCode]);
+const materialOptionsForSelectedJob = useMemo(() => {
+  const job = jobs.find((j) => j._id === formData.poCode);
+
+  // PO me material assigned hai
+  if (job && typeof job.materialId === "object" && job.materialId) {
+    return [
+      {
+        label: job.materialId.name,
+        value: job.materialId._id,
+      },
+    ];
+  }
+
+  // PO me material nahi hai
+  return materials.map((material) => ({
+    label: material.name,
+    value: material._id,
+  }));
+}, [jobs, materials, formData.poCode]);
 
   const pickupOptions = useMemo(
     () => Object.entries(siteMap).map(([value, label]) => ({ label, value })),
@@ -179,7 +261,7 @@ const EditDispatchModal = ({
     if (!isFormValid || submitting) return;
 
     if (!dispatchId) {
-      console.error("Cannot create a Load without a dispatchId.");
+      setDispatchError("Please select a dispatch date first.");
       return;
     }
 
@@ -193,7 +275,6 @@ const EditDispatchModal = ({
       numberOfTrips: Number(formData.loads) || 0,
       invoiceRate: parseAmount(formData.invoiceRate),
       contractorRate: parseAmount(formData.contractorRate),
-      // weightPerTrip: Number(formData.weightPerTrip) || 0,
       startTime: formData.startTime,
       endTime: formData.endTime,
       comment: formData.comment || undefined,
@@ -212,6 +293,7 @@ const EditDispatchModal = ({
   };
 
   const handleAddColumn = () => {
+    if (!dispatchId) return;
     setColumns((prev) => [...prev, prev.length + 1]);
   };
   const handleRemoveColumn = () => {
@@ -222,11 +304,11 @@ const EditDispatchModal = ({
 
   const isFormValid =
     formData.dispatchDate.trim() !== "" &&
+    !!dispatchId &&
     formData.customer.trim() !== "" &&
     formData.poCode.trim() !== "" &&
     formData.material.trim() !== "" &&
     formData.loads.trim() !== "" &&
-    // formData.weightPerTrip.trim() !== "" &&
     formData.invoiceRate.trim() !== "" &&
     formData.contractorRate.trim() !== "" &&
     formData.pickup.trim() !== "" &&
@@ -244,7 +326,9 @@ const EditDispatchModal = ({
           <div className="shrink-0 px-3 py-3 xl:px-4 xl:py-3 flex items-start justify-between">
             <div>
               <h2 className="text-lg xl:text-xl font-normal text-black">
-                {isEdit ? (title ?? "Edit Dispatch") : (title ?? "Create Dispatch")}
+                {isEdit
+                  ? (title ?? "Edit Dispatch")
+                  : (title ?? "Create Dispatch")}
               </h2>
               <p className="mt-1 text-xs md:text-sm md:mt-2 text-[#717182]">
                 {description ??
@@ -267,6 +351,14 @@ const EditDispatchModal = ({
                 onChange={handleDispatchDateChange}
                 type="date"
               />
+              {creatingDispatch && (
+                <p className="text-xs text-[#717182] mt-1">
+                  Creating dispatch...
+                </p>
+              )}
+              {dispatchError && (
+                <p className="text-xs text-red-500 mt-1">{dispatchError}</p>
+              )}
             </div>
 
             {columns.map((_, index) => (
@@ -276,18 +368,20 @@ const EditDispatchModal = ({
                 </h3>
                 <div className="sm:grid-cols-2 grid-cols-1 mt-6 flex sm:grid flex-col gap-4">
                   <CommonSelectInput
-                    label="Customer"
-                    value={formData.customer}
-                    onChange={handleChange("customer")}
-                    options={customerOptions}
-                  />
-
-                  <CommonSelectInput
                     label="Job ID# / PO Code"
                     value={formData.poCode}
                     onChange={handleChange("poCode")}
                     options={jobOptions}
+                    disabled={optionsLoading}
                   />
+                  <CommonSelectInput
+                    label="Customer"
+                    value={formData.customer}
+                    onChange={handleChange("customer")}
+                    options={customerOptions}
+                    disabled={optionsLoading}
+                  />
+
                   <CommonSelectInput
                     label="Material"
                     value={formData.material}
@@ -301,13 +395,6 @@ const EditDispatchModal = ({
                     onChange={handleChange("loads")}
                     placeholder="Enter"
                   />
-
-                  {/* <CommonTextInput
-                    label="Weight per Trip"
-                    value={formData.weightPerTrip}
-                    onChange={handleChange("weightPerTrip")}
-                    placeholder="Enter"
-                  /> */}
 
                   <CommonTextInput
                     label="Invoice Rate"
@@ -333,6 +420,7 @@ const EditDispatchModal = ({
                     addNewLabel="Add New"
                     onAddNew={onOpenPickupModal}
                     addNewMode="modal"
+                    disabled={optionsLoading}
                   />
 
                   <CommonSelectInput
@@ -343,6 +431,7 @@ const EditDispatchModal = ({
                     addNewLabel="Add New"
                     onAddNew={onOpenPickupModal}
                     addNewMode="modal"
+                    disabled={optionsLoading}
                   />
 
                   <CommonTextInput
@@ -368,7 +457,9 @@ const EditDispatchModal = ({
                       <textarea
                         placeholder="Enter..."
                         value={formData.comment}
-                        onChange={(e) => handleChange("comment")(e.target.value)}
+                        onChange={(e) =>
+                          handleChange("comment")(e.target.value)
+                        }
                         className="w-full h-[120px] border-[0.85px] border-[#E5E7EB] rounded-[8px] p-2 md:p-4 resize-none outline-none"
                       />
                     </div>
@@ -378,11 +469,15 @@ const EditDispatchModal = ({
             ))}
 
             <div className="mt-4 flex items-center gap-4">
-              <span className="text-sm xl:text-base font-semibold">Columns:</span>
+              <span className="text-sm xl:text-base font-semibold">
+                Columns:
+              </span>
 
               <button
                 onClick={handleAddColumn}
-                className="w-7 h-7 rounded flex items-center justify-center text-white bg-[#22C55E] cursor-pointer"
+                disabled={!dispatchId}
+                className={`w-7 h-7 rounded flex items-center justify-center text-white bg-[#22C55E]
+                ${dispatchId ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
               >
                 <Plus size={18} />
               </button>
@@ -409,7 +504,7 @@ const EditDispatchModal = ({
 
               <button
                 onClick={handleAddColumn}
-                disabled={disableActions}
+                disabled={disableActions || !dispatchId}
                 className="flex-1 min-w-[200px] h-[40px] border border-primary text-primary rounded-[8px] text-sm cursor-pointer disabled:opacity-50 disabled:cursor-default"
               >
                 Add Another Column

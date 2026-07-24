@@ -3,8 +3,33 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Table from "../common/Table";
 import CommonButton from "../common/CommonButton";
+import type { ContractorTruck, ContractorDriver } from "../../types/auth.types";
 
-export const truckDetailsData = [
+export const truckDetailsColumns = [
+  {
+    label: "Truck ID",
+    key: "truckId",
+  },
+  {
+    label: "Driver",
+    key: "driver",
+  },
+  {
+    label: "Truck Type",
+    key: "truckType",
+  },
+  {
+    label: "License Plate",
+    key: "licensePlate",
+  },
+  {
+    label: "Capacity",
+    key: "capacity",
+  },
+];
+
+// Dummy fallback jab tak contractor detail API se real trucks na aayein
+const dummyTrucks = [
   {
     id: 1,
     truckId: "#280099",
@@ -29,93 +54,44 @@ export const truckDetailsData = [
     licensePlate: "LMN9101",
     capacity: "20 Tons",
   },
-  {
-    id: 4,
-    truckId: "#280798",
-    driver: "Andrew Brooks",
-    truckType: "Dump Truck",
-    licensePlate: "QRS2345",
-    capacity: "20 Tons",
-  },
-  {
-    id: 5,
-    truckId: "#280798",
-    driver: "Mathew Arnold",
-    truckType: "Paver",
-    licensePlate: "TUV6789",
-    capacity: "20 Tons",
-  },
-  {
-    id: 6,
-    truckId: "#280798",
-    driver: "Mathew Arnold",
-    truckType: "Dump Truck",
-    licensePlate: "WXY3456",
-    capacity: "20 Tons",
-  },
-  {
-    id: 7,
-    truckId: "#280798",
-    driver: "Mark Lucas",
-    truckType: "Paver",
-    licensePlate: "JKL7890",
-    capacity: "20 Tons",
-  },
-  {
-    id: 8,
-    truckId: "#280692",
-    driver: "Mark Lucas",
-    truckType: "Paver",
-    licensePlate: "NOP1234",
-    capacity: "20 Tons",
-  },
-  {
-    id: 9,
-    truckId: "#280692",
-    driver: "Mark Lucas",
-    truckType: "Dump Truck",
-    licensePlate: "DEF5678",
-    capacity: "40 Tons",
-  },
 ];
 
-export const truckDetailsColumns = [
-  {
-    label: "Truck ID",
-    key: "truckId",
-  },
-  {
-    label: "Driver",
-    key: "driver",
-  },
-  {
-    label: "Truck Type",
-    key: "truckType",
-  },
-  {
-    label: "License Plate",
-    key: "licensePlate",
-  },
-  {
-    label: "Capacity",
-    key: "capacity",
-  },
-];
-const TruckDetailsTab = () => {
-const [search, setSearch] = useState("");
+interface TruckDetailsTabProps {
+  trucks?: ContractorTruck[];
+  drivers?: ContractorDriver[];
+  loading?: boolean;
+}
 
-const filteredData = useMemo(() => {
-  const value = search.toLowerCase().trim();
-
-  if (!value) return truckDetailsData;
-
-  return truckDetailsData.filter((item) =>
-    Object.values(item).some((field) =>
-      String(field).toLowerCase().includes(value)
-    )
-  );
-}, [search]);
+const TruckDetailsTab = ({ trucks, drivers, loading = false }: TruckDetailsTabProps) => {
+  const [search, setSearch] = useState("");
   const navigate = useNavigate();
+
+  // Real API data ho to usi se row banao (driver naam assignedDriverId se lookup karke),
+  // truckType/licensePlate/capacity API me nahi aate isliye dummy rehta hai
+  const rows = trucks
+    ? trucks.map((t) => ({
+        id: t._id,
+        truckId: t.unitNumber,
+        driver: drivers?.find((d) => d._id === t.assignedDriverId)?.name || "-",
+        truckType: "-",
+        licensePlate: "-",
+        capacity: "-",
+      }))
+    : dummyTrucks;
+
+  const filteredData = useMemo(() => {
+    const value = search.toLowerCase().trim();
+
+    if (!value) return rows;
+
+    return rows.filter((item) =>
+      Object.values(item).some((field) =>
+        String(field).toLowerCase().includes(value)
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, rows]);
+
   return (
     <div className="border border-[#E5E7EB]">
       <div className="flex items-center justify-between gap-3 p-2 sm:p-4">
@@ -130,7 +106,7 @@ const filteredData = useMemo(() => {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 border-t border-[#E5E7EB] pt-5 px-2 sm:px-4">
         <p className="text-sm sm:text-base font-medium text-[#1B2D6B]">
-          Total Amount Paid : $32000.00
+          Total Trucks : {rows.length}
         </p>
         <div className="relative w-full sm:w-auto">
           <Search
@@ -147,12 +123,16 @@ const filteredData = useMemo(() => {
         </div>
       </div>
 
-      <Table
-        data={filteredData}
-        columns={truckDetailsColumns}
-        isCheckbox={false}
-        minWidth="min-w-[600px]"
-      />
+      {loading ? (
+        <p className="text-sm text-[#6B7280] py-6 text-center">Loading trucks...</p>
+      ) : (
+        <Table
+          data={filteredData}
+          columns={truckDetailsColumns}
+          isCheckbox={false}
+          minWidth="min-w-[600px]"
+        />
+      )}
     </div>
   );
 };

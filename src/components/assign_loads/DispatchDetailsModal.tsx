@@ -2,8 +2,9 @@ import { Modal } from "@mui/material";
 import AssignLoadCard from "../assign_loads/AssignLoadCard";
 import collapsed from "../../assets/icons/collapsed.svg";
 import { useAppSelector } from "../../store";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { selectLoadCards, type AssignLoadCardData } from "../../store/dispatchSlice";
+import { getAssignmentMatrixApi } from "../../services/auth.service";
 
 interface Props {
   open: boolean;
@@ -11,28 +12,70 @@ interface Props {
   loadCards?: any[];
   onCancelReroute: () => void;
   selectedDay?: string;
+  date?: string;
 }
+
+const mapMatrixColumnToCard = (item: any): AssignLoadCardData => ({
+  driverName: item.customerName,
+  delivery: item.delivery,
+  loads: item.loads,
+  rate: item.rate,
+  pickup: item.pickup,
+  material: item.material,
+  time: item.time,
+  headerColor: item.headerColor ?? "yellow",
+});
 
 const DispatchDetailsModal = ({
   open,
   onClose,
   onCancelReroute,
   selectedDay,
+  date,
 }: Props) => {
   const selectedDayRedux = useAppSelector((state) => state.dispatch.selectedDay);
   const loadCardsRedux = useAppSelector(selectLoadCards);
+  const [assignmentCards, setAssignmentCards] = useState<AssignLoadCardData[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(false);
 
   const activeDay = selectedDay || selectedDayRedux;
 
   const currentLoadCards = useMemo(() => {
-    const offset = activeDay.charCodeAt(activeDay.length - 1) % 5;
+    if (assignmentCards.length > 0) {
+      const offset = activeDay.charCodeAt(activeDay.length - 1) % 5;
+      return assignmentCards.map((card) => ({
+        ...card,
+        loads: card.loads + offset * 5,
+      }));
+    }
 
+    const offset = activeDay.charCodeAt(activeDay.length - 1) % 5;
     return loadCardsRedux.map((card: AssignLoadCardData) => ({
       ...card,
       driverName: `${card.driverName}`,
       loads: card.loads + offset * 5,
     }));
-  }, [loadCardsRedux, activeDay]);
+  }, [assignmentCards, loadCardsRedux, activeDay]);
+
+  useEffect(() => {
+    const loadAssignments = async () => {
+      if (!date) return;
+      setCardsLoading(true);
+
+      try {
+        const res = await getAssignmentMatrixApi(date);
+        setAssignmentCards(
+          res.data?.data?.columns?.map(mapMatrixColumnToCard) ?? [],
+        );
+      } catch (err) {
+        console.error("Failed to load dispatch details:", err);
+      } finally {
+        setCardsLoading(false);
+      }
+    };
+
+    loadAssignments();
+  }, [date]);
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -41,7 +84,7 @@ const DispatchDetailsModal = ({
           {/* Header */}
           <div className="bg-white border-b border-gray-200 h-[45px] px-6 flex items-center justify-between rounded-t-xl">
             <h2 className="text-lg font-semibold">
-              Dispatch Details for {activeDay || "2024-06-03"}
+              Dispatch Details for {activeDay || date || "2024-06-03"}
             </h2>
 
             <button
@@ -54,18 +97,25 @@ const DispatchDetailsModal = ({
 
           {/* Cards Section Only */}
           <div className="p-2">
-            <div className="flex gap-4 overflow-x-scroll pb-4"   style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "#1D3461 #D9D9D9",
-            }}>
-              {currentLoadCards.map((card: AssignLoadCardData, index: number) => (
-                <AssignLoadCard
-                  key={index}
-                  {...card}
-                  expandOnHover={false}
-                  onCancelReroute={onCancelReroute}
-                />
-              ))}
+            <div
+              className="flex gap-4 overflow-x-scroll pb-4"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#1D3461 #D9D9D9",
+              }}
+            >
+              {cardsLoading ? (
+                <div className="text-sm text-[#6B7280] px-2">Loading...</div>
+              ) : (
+                currentLoadCards.map((card: AssignLoadCardData, index: number) => (
+                  <AssignLoadCard
+                    key={index}
+                    {...card}
+                    expandOnHover={false}
+                    onCancelReroute={onCancelReroute}
+                  />
+                ))
+              )}
             </div>
           </div>
         </div>

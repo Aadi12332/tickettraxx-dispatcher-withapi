@@ -11,16 +11,14 @@ import CommonPhoneInput from "../common/CommonPhoneInput";
 import axios from "axios";
 import {
   createContractorApi,
-  updateContractorApi,
   uploadContractorFilesApi,
 } from "../../services/auth.service";
-import type { Contractor, ContractorPayload } from "../../types/auth.types";
 
 interface ContractorModalProps {
   open: boolean;
   onClose: () => void;
   isEdit?: boolean;
-  editData?: Contractor | null;
+  editData?: any | null;
   // Create/update successful hone ke baad parent ko batane ke liye, taaki list refresh ho sake
   onSuccess?: () => void;
 }

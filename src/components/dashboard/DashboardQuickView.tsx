@@ -109,7 +109,7 @@ const DashboardQuickView = ({
 
       {/* Table */}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[400px]">
         <table className="w-full min-w-[900px]">
           <thead>
             <tr className="bg-(--border-gray-2) h-[36px]">

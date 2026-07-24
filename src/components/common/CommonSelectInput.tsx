@@ -15,6 +15,7 @@ interface CommonSelectInputProps {
   addNewLabel?: string;
   addNewMode?: "input" | "modal";
   onAddNew?: (value: string) => void;
+  disabled?: boolean;
 }
 
 const CommonSelectInput = ({

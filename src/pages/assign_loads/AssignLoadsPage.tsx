@@ -17,10 +17,12 @@ import {
   setOriginalRowData,
   confirmSaveGridData,
   setSelectedDay,
-  selectLoadCards,
 } from "../../store/dispatchSlice";
 import ToastModal from "../../components/common/modal/ToastModal";
 import SuccessActionModal from "../../components/assign_loads/SuccessActionModal";
+import {
+  getAssignmentMatrixApi,
+} from "../../services/auth.service";
 
 export const weekDays = [
   "SUN 4/3",
@@ -32,17 +34,38 @@ export const weekDays = [
   "SAT 4/9",
 ];
 
+interface LoadCard {
+  driverName: string;
+  delivery: string;
+  loads: number;
+  rate: number;
+  pickup: string;
+  material: string;
+  time: string;
+  headerColor?: "yellow" | "orange";
+}
+
+export const mapMatrixColumnToCard = (item: any): LoadCard => ({
+  driverName: item.customerName,
+  delivery: item.delivery,
+  loads: item.loads,
+  rate: item.rate,
+  pickup: item.pickup,
+  material: item.material,
+  time: item.time,
+});
+
 const AssignLoadsPage = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastTitle, setToastTitle] = useState("");
-  console.log(setToastTitle);
   const dispatch = useAppDispatch();
   const selectedDay = useAppSelector((state) => state.dispatch.selectedDay);
   const rowData = useAppSelector((state) => state.dispatch.rowData);
   const originalRowData = useAppSelector(
     (state) => state.dispatch.originalRowData,
   );
-  const loadCardsFromRedux = useAppSelector(selectLoadCards);
+  const [assignmentCards, setAssignmentCards] = useState<LoadCard[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(false);
 
   const [openCancelDrawer, setOpenCancelDrawer] = useState(false);
   const [openDispatchModal, setOpenDispatchModal] = useState(false);
@@ -55,11 +78,13 @@ const AssignLoadsPage = () => {
     title: "",
   });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  console.log(showSuccessModal);
+  console.log(setToastTitle, showSuccessModal)
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0],
   );
+  const [matrixData, setMatrixData] = useState<any>(null);
+  const [footer, setFooter] = useState<any>(null);
   const weekDays = [
     "SUN 4/3",
     "MON 4/4",
@@ -79,6 +104,49 @@ const AssignLoadsPage = () => {
     "FRI 4/8",
     "SAT 4/9",
   ];
+
+  const loadAssignments = async () => {
+    setCardsLoading(true);
+    try {
+      const res = await getAssignmentMatrixApi(selectedDate);
+      console.log("Assignment Matrix API Response:", res);
+      setMatrixData(res.data?.data);
+      setFooter(res.data?.footer);
+
+      setAssignmentCards(res.data?.data?.columns.map(mapMatrixColumnToCard));
+      const rows = res.data?.data?.rows.map((row: any) => ({
+        driver: row.driver,
+        truckId: row.truckId,
+        tonnage: row.tonnage,
+        total: row.total,
+        status: row.status,
+        weCall: row.weCall,
+
+        jobs: row.jobs.map((job: any) => {
+          const column = res.data?.data?.columns.find(
+            (c: any) => c.id === job.id
+          );
+
+          return {
+            ...job,
+            id: column?.poCode ?? job.id,
+          };
+        }),
+      }));
+
+      dispatch(setRowData(rows));
+      dispatch(setOriginalRowData(JSON.parse(JSON.stringify(rows))));
+    } catch (err) {
+      console.error("Failed to load assignments:", err);
+    } finally {
+      setCardsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAssignments();
+  }, [selectedDate]);
+
   const handleShowToast = (title: string) => {
     setSuccessModal({
       open: true,
@@ -131,14 +199,8 @@ const AssignLoadsPage = () => {
   };
 
   const currentLoadCards = useMemo(() => {
-    const offset = selectedDay.charCodeAt(selectedDay.length - 1) % 5;
-
-    return loadCardsFromRedux.map((card) => ({
-      ...card,
-      driverName: `${card.driverName}`,
-      loads: card.loads + offset * 5,
-    }));
-  }, [loadCardsFromRedux, selectedDay]);
+    return assignmentCards;
+  }, [assignmentCards]);
 
   return (
     <div className="space-y-1">
@@ -146,13 +208,16 @@ const AssignLoadsPage = () => {
         title="Assign Loads"
         description="Enables you to assign loads to available drivers"
       >
-        <div className="overflow-auto cards-scroll w-[calc(100vw-32px)] lg:w-[unset]"  style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "#1D3461 #D9D9D9",
-            }}>
+        <div
+          className="overflow-auto cards-scroll w-[calc(100vw-32px)] lg:w-[unset]"
+          style={{
+            scrollbarWidth: "thin",
+            scrollbarColor: "#1D3461 #D9D9D9",
+          }}
+        >
           <div className="flex items-stretch gap-1 w-full md:justify-end min-w-[710px] lg:min-w-[unset]">
-          {/* Left Action */}
-          <button
+            {/* Left Action */}
+            <button
               onClick={handleUpdate}
               className="
                 h-10 px-3 gap-2 text-sm
@@ -167,10 +232,10 @@ const AssignLoadsPage = () => {
               <RefreshCcw size={16} />
             </button>
 
-              <button
-            // onClick={() => setOpenGridModal(true)}
-            onClick={() => setOpenDispatchModal(true)}
-            className="
+            <button
+              // onClick={() => setOpenGridModal(true)}
+              onClick={() => setOpenDispatchModal(true)}
+              className="
               h-10 w-10 min-w-10
               rounded-lg
               border border-(--border-gray-2)
@@ -179,13 +244,13 @@ const AssignLoadsPage = () => {
               cursor-pointer
               shrink-0
             "
-          >
-            <img src={UpscaleImg} className="size-[18px]" />
-          </button>
+            >
+              <img src={UpscaleImg} className="size-[18px]" />
+            </button>
 
-          {/* Date Filter */}
-          <div
-            className="
+            {/* Date Filter */}
+            <div
+              className="
               flex gap-3
               flex-wrap sm:flex-nowrap
               items-center
@@ -196,50 +261,50 @@ const AssignLoadsPage = () => {
             min-w-0
               overflow-hidden
             "
-          >
-            {/* Week Days */}
-            <div className="flex md:flex-1 max-w-lg min-w-0 overflow-x-auto scrollbar-hide ">
-              <div className="flex items-center gap-2 w-max text-xs">
-                {weekDays.map((day, index) => (
-                  <button
-                    key={day}
-                    onClick={() => {
-                      dispatch(setSelectedDay(day));
+            >
+              {/* Week Days */}
+              <div className="flex md:flex-1 max-w-lg min-w-0 overflow-x-auto scrollbar-hide ">
+                <div className="flex items-center gap-2 w-max text-xs">
+                  {weekDays.map((day, index) => (
+                    <button
+                      key={day}
+                      onClick={() => {
+                        dispatch(setSelectedDay(day));
 
-                      const date = new Date(selectedDate);
-                      const currentDay = date.getDay();
-                      const diff = index - currentDay;
+                        const date = new Date(selectedDate);
+                        const currentDay = date.getDay();
+                        const diff = index - currentDay;
 
-                      date.setDate(date.getDate() + diff);
-                      setSelectedDate(date.toISOString().split("T")[0]);
-                    }}
-                    className={
-                      selectedDay === day
-                        ? "bg-sky-blue-two text-white px-1 py-0.5 rounded-lg cursor-progress"
-                        : "text-[#2F2F2F]"
-                    }
-                  >
-                    {day}
-                  </button>
-                ))}
+                        date.setDate(date.getDate() + diff);
+                        setSelectedDate(date.toISOString().split("T")[0]);
+                      }}
+                      className={
+                        selectedDay === day
+                          ? "bg-sky-blue-two text-white px-1 py-0.5 rounded-lg cursor-progress"
+                          : "text-[#2F2F2F]"
+                      }
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Date + Search */}
-            <div className="flex items-center gap-1 ml-auto sm:ml-2 shrink-0 ">
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSelectedDate(value);
+              {/* Date + Search */}
+              <div className="flex items-center gap-1 ml-auto sm:ml-2 shrink-0 ">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSelectedDate(value);
 
-                  if (!value) return;
+                    if (!value) return;
 
-                  const index = new Date(value).getDay();
-                  dispatch(setSelectedDay(weekDayMap[index]));
-                }}
-                className="
+                    const index = new Date(value).getDay();
+                    dispatch(setSelectedDay(weekDayMap[index]));
+                  }}
+                  className="
                   h-8
                   w-[120px]
                   px-2
@@ -248,10 +313,10 @@ const AssignLoadsPage = () => {
                   rounded
                   outline-none
                 "
-              />
+                />
 
-              <button
-                className="
+                <button
+                  className="
                   h-8 
                   w-8 min-w-8
                   rounded
@@ -260,18 +325,17 @@ const AssignLoadsPage = () => {
                   text-white
                   cursor-pointer
                 "
-              >
-                <img src={searchIcon} alt="search" className="size-5" />
-              </button>
+                >
+                  <img src={searchIcon} alt="search" className="size-5" />
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              // onClick={() => setOpenDispatchModal(true)}
-              onClick={() => setOpenGridModal(true)}
-              className="
+            {/* Right Actions */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setOpenGridModal(true)}
+                className="
                 h-10 w-10 min-w-10
                 rounded-lg
                 border border-(--border-gray-2)
@@ -279,11 +343,11 @@ const AssignLoadsPage = () => {
                 flex items-center justify-center
                 cursor-pointer
               "
-            >
-              <img src={UpscaleImg} className="size-[18px]" />
-            </button>
+              >
+                <img src={UpscaleImg} className="size-[18px]" />
+              </button>
+            </div>
           </div>
-        </div>
         </div>
       </PageHeader>
       <style>{`
@@ -314,6 +378,9 @@ const AssignLoadsPage = () => {
             }}
           >
             <div className="flex gap-4 min-w-max items-center pb-3 pt-0 max-w-full">
+              {cardsLoading && (
+                <p className="text-sm text-[#6B7280] px-2">Loading...</p>
+              )}
               {currentLoadCards.map((card, index) => (
                 <AssignLoadCard
                   key={index}
@@ -344,6 +411,9 @@ const AssignLoadsPage = () => {
                 }, 3000);
               }}
               customHeight="h-[calc(100vh-105px)]"
+              jobHeaders={matrixData?.columns?.map((x: any) => x.poCode) || []}
+              footer={footer}
+              matrixData={matrixData}
             />
           </div>
         </div>
@@ -370,12 +440,16 @@ const AssignLoadsPage = () => {
             setShowSuccessModal(false);
           }, 3000);
         }}
+        jobHeaders={matrixData?.columns?.map((x: any) => x.poCode) || []}
+        footer={matrixData?.footer}
+        matrixData={matrixData}
       />
       <DispatchDetailsModal
         open={openDispatchModal}
         onClose={() => setOpenDispatchModal(false)}
         loadCards={currentLoadCards}
         selectedDay={selectedDay}
+        date={selectedDate}
         onCancelReroute={() => setOpenCancelDrawer(true)}
       />
       <EditDispatchModal

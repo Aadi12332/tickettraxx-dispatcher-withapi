@@ -1,3 +1,4 @@
+//@ts-check
 import { Modal } from "@mui/material";
 import { X, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -78,6 +79,7 @@ const CreatePOCodeModal = ({
   const [pickupOptions, setPickupOptions] = useState<OptionType[]>([]);
   const [deliveryOptions, setDeliveryOptions] = useState<OptionType[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
+  console.log(optionsLoading);
   const [newThirdPartyName, setNewThirdPartyName] = useState("");
 
   useEffect(() => {

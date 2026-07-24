@@ -9,6 +9,7 @@ interface CommonButtonProps {
   className?: string;
   type?: "button" | "submit" | "reset";
   iconOnly?: boolean;
+  disabled?: boolean;
 }
 
 const variantStyles = {

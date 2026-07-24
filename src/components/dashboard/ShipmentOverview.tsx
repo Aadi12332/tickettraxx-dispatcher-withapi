@@ -54,7 +54,7 @@ export default function ShipmentOverview({
 
   return (
     <div className="bg-white rounded-[5px] border shadow-sm border-(--border-gray-2) pb-2">
-      <div className="flex flex-wrap lg:flex-nowrap gap-3 items-center justify-between border-b border-(--border-gray-2) px-5 sm:py-3 py-2">
+      <div className="flex flex-wrap gap-3 items-center justify-between border-b border-(--border-gray-2) px-5 sm:py-3 py-2">
         <SectionTitle title="Shipment Overview" />
 
         <div className="flex items-center xl:gap-2 gap-3 sm:ml-auto">
@@ -79,7 +79,7 @@ export default function ShipmentOverview({
         </div>
       </div>
 
-      <div className="flex items-end justify-between xl:h-[290px] h-[200px] mt-10 px-4 gap-2 overflow-x-auto">
+      <div className="flex items-end justify-between lg:h-[310px] h-[200px] mt-10 px-4 gap-2 overflow-auto pb-2">
         {loading ? (
           <div className="w-full h-full animate-pulse bg-gray-50" />
         ) : filteredShipments.length === 0 ? (
@@ -103,7 +103,7 @@ export default function ShipmentOverview({
               )}
 
               <div
-                className="w-3.5 rounded-full bg-text-gray"
+                className="w-3.5 rounded-full bg-text-gray hover:bg-primary cursor-pointer"
                 style={{
                   height: `${Math.max((item.count / maxCount) * 180, 4)}px`,
                 }}

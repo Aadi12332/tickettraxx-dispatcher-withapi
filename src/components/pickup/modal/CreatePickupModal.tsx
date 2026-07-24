@@ -132,7 +132,7 @@ useEffect(() => {
     }
 
     const requestId = ++geocodeRequestId.current;
-
+console.log(newThirdPartyCustomer)
     const geocodeLocation = async () => {
       try {
         const response = await fetch(

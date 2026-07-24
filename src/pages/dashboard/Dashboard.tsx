@@ -281,18 +281,20 @@ const dashboardStats = statMeta.map((meta) => {
             )}
 
             {section === "analytics" && (
-              <div className="grid grid-cols-1 xl:grid-cols-[3fr_2fr] gap-3">
-                <div className="">
+              <div className="flex xl:flex-row flex-col gap-3">
+                <div className="flex-1 xl:max-w-[60%]">
                   <RevenueChart
                     revenueSummary={dashboardData?.revenueSummary ?? null}
                     loading={loading}
                   />
                 </div>
 
-                <ShipmentOverview
+               <div className="flex-1 xl:max-w-[40%]">
+                 <ShipmentOverview
                   shipmentsByCustomer={dashboardData?.shipmentsByCustomer ?? []}
                   loading={loading}
                 />
+               </div>
               </div>
             )}
 

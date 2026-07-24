@@ -29,6 +29,7 @@ export const MATERIAL_ENDPOINTS = {
 
 export const DISPATCH_ENDPOINTS = {
   GET_DISPATCHES: "/dispatches",
+  CREATE_DISPATCH: "/dispatches",
   EXPORT_DISPATCH: (id: string) => `/dispatches/${id}/export`,
 } as const;
 
@@ -66,4 +67,23 @@ export const DASHBOARD_ENDPOINTS = {
 export const LOAD_ENDPOINTS = {
   LOADS: "/loads",
   LOAD_BY_ID: (id: string) => `/loads/${id}`,
+} as const;
+
+export const CONTRACTOR_ACTION_ENDPOINTS = {
+  DEACTIVATE: (id: string) => `/contractors/${id}/deactivate`,
+  REACTIVATE: (id: string) => `/contractors/${id}/reactivate`,
+} as const;
+
+export const DRIVER_ENDPOINTS = {
+  DRIVERS: "/drivers",
+  DRIVER_BY_ID: (id: string) => `/drivers/${id}`,
+} as const;
+
+export const TRUCK_ENDPOINTS = {
+  TRUCKS: "/trucks",
+  TRUCK_BY_ID: (id: string) => `/trucks/${id}`,
+} as const;
+
+export const ASSIGNMENT_ENDPOINTS = {
+  ASSIGNMENTS: "/assignments",
 } as const;

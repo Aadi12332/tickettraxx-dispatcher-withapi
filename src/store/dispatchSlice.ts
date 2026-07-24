@@ -618,7 +618,7 @@ const dispatchSlice = createSlice({
     },
 
     setRowData: (state, action: PayloadAction<RowData[]>) => {
-      state.rowData = action.payload;
+      state.rowData=action.payload
     },
     setOriginalRowData: (state, action: PayloadAction<RowData[]>) => {
       state.originalRowData = action.payload;

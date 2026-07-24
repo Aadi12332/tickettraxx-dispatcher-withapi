@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import dayjs from "dayjs";
+import axios from "axios";
 import {
   Phone,
   Mail,
@@ -34,19 +36,12 @@ import TruckDetailsTab from "../../components/contractor/TruckDetailsTab";
 import TicketsTab from "../../components/contractor/TicketsTab";
 import SettlementStatementTab from "../../components/contractor/SettlementStatementTab";
 import ContractorModal from "../../components/contractor/ContractorModal";
-
-const contractor = {
-  name: "John Mason",
-  company: "Hudson Freight",
-  verified: true,
-  contractorId: "CLT-0024",
-  addedOn: "1st Jan 2023",
-  usdot: "1234567",
-  txdot: "TX-98765",
-  phone: "+1 458 7877 879",
-  email: "perralt12@example.com",
-  address: "1861 Bayonne Ave,\nManchester, NJ, 08759",
-};
+import {
+  getContractorByIdApi,
+  deactivateContractorApi,
+  reactivateContractorApi,
+} from "../../services/auth.service";
+import type { ContractorDetail } from "../../types/auth.types";
 
 const truckTableData = [
   {
@@ -61,27 +56,6 @@ const truckTableData = [
     truckId: "123242",
     truckName: "Volvo",
     capacity: "60",
-    truckStatus: "Available",
-  },
-  {
-    id: 3,
-    truckId: "434355",
-    truckName: "Volvo",
-    capacity: "100",
-    truckStatus: "In Service",
-  },
-  {
-    id: 4,
-    truckId: "345343",
-    truckName: "Volvo",
-    capacity: "150",
-    truckStatus: "Available",
-  },
-  {
-    id: 5,
-    truckId: "423455",
-    truckName: "Volvo",
-    capacity: "200",
     truckStatus: "Available",
   },
 ];
@@ -99,7 +73,15 @@ const statusDot: Record<string, string> = {
   red: "#EF4444",
 };
 
-const pastJobsData = [
+// Job status -> dot color mapping (jobs list ke liye)
+const jobStatusDot = (status: string) => {
+  const s = status?.toLowerCase();
+  if (s === "completed" || s === "delivered") return "green";
+  if (s === "rejected" || s === "cancelled") return "red";
+  return "orange";
+};
+
+const dummyPastJobs = [
   {
     id: 1,
     date: "15 May 2026",
@@ -108,24 +90,6 @@ const pastJobsData = [
     weight: "50tonnes",
     truckId: "121324",
     dotColor: "orange",
-  },
-  {
-    id: 2,
-    date: "15 May 2026",
-    route: "Chicago-San Fransico",
-    material: "Sand",
-    weight: "50tonnes",
-    truckId: "121324",
-    dotColor: "green",
-  },
-  {
-    id: 3,
-    date: "15 May 2026",
-    route: "Chicago-San Fransico",
-    material: "Sand",
-    weight: "50tonnes",
-    truckId: "121324",
-    dotColor: "red",
   },
 ];
 
@@ -140,22 +104,84 @@ const TABS = [
 
 const ContractorDetailsPage = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("overview");
-const [jobSearch, setJobSearch] = useState("");
-const filteredPastJobs = pastJobsData.filter((job) => {
-  const value = jobSearch.toLowerCase();
+  const [jobSearch, setJobSearch] = useState("");
 
-  return (
-    job.date.toLowerCase().includes(value) ||
-    job.route.toLowerCase().includes(value) ||
-    job.material.toLowerCase().includes(value) ||
-    job.weight.toLowerCase().includes(value) ||
-    job.truckId.toLowerCase().includes(value)
-  );
-});
+  const [contractor, setContractor] = useState<ContractorDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const handleToggleStatus = async () => {
+    if (!id) return;
+
+    setActionLoading(true);
+    try {
+      if (isActive) {
+        await deactivateContractorApi(id);
+      } else {
+        await reactivateContractorApi(id);
+      }
+      setIsActive((prev) => !prev);
+    } catch (err) {
+      console.error("Failed to update contractor status:", err);
+    } finally {
+      setActionLoading(false);
+      setShowConfirmTooltip(false);
+    }
+  };
+
+  const fetchContractor = async () => {
+    if (!id) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await getContractorByIdApi(id);
+      setContractor(res.data);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Unable to load contractor.");
+      } else {
+        setError("Unable to load contractor.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContractor();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // Real jobs ho to unhi se cards banao — pickup/deliver/material is response me null hain,
+  // isliye wahan "-" dikhta hai (dummy data nahi ghadha)
+  const pastJobs = contractor
+    ? contractor.recentJobs.map((job) => ({
+        id: job._id,
+        date: dayjs(job.date).format("DD MMM YYYY"),
+        route: job.customerId?.name ? `${job.customerId.name}` : "-",
+        material: job.materialId || "-",
+        weight: `${job.weightPerTrip} tons`,
+        truckId: "-",
+        dotColor: jobStatusDot(job.status),
+      }))
+    : dummyPastJobs;
+
+  const filteredPastJobs = pastJobs.filter((job) => {
+    const value = jobSearch.toLowerCase();
+
+    return (
+      job.date.toLowerCase().includes(value) ||
+      job.route.toLowerCase().includes(value) ||
+      job.material.toLowerCase().includes(value) ||
+      job.weight.toLowerCase().includes(value) ||
+      job.truckId.toLowerCase().includes(value)
+    );
+  });
+
   const [openEditContractorModal, setOpenEditContractorModal] = useState(false);
-
-  // Add Job modal state
   const [showAddJobModal, setShowAddJobModal] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [showConfirmTooltip, setShowConfirmTooltip] = useState(false);
@@ -163,12 +189,24 @@ const filteredPastJobs = pastJobsData.filter((job) => {
   const [openCallModal, setOpenCallModal] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
+  useEffect(() => {
+    if (contractor) setIsActive(contractor.status === "active");
+  }, [contractor]);
+
+  const displayName = contractor?.companyName || "Loading...";
+  const displayPhone = contractor?.phone || "-";
+  const displayEmail = contractor?.email || "-";
+  // Address/USDOT/TxDOT contractor detail API me nahi aate — dummy hi rehte hain
+  const displayAddress = "1861 Bayonne Ave,\nManchester, NJ, 08759";
+  const usdot = "1234567";
+  const txdot = "TX-98765";
+
   const handleSendMail = () => {
-    const subject = encodeURIComponent("Hello John Mason");
-    const body = encodeURIComponent("Hi John,");
+    const subject = encodeURIComponent(`Hello ${displayName}`);
+    const body = encodeURIComponent(`Hi,`);
 
     window.open(
-      `https://mail.google.com/mail/?view=cm&fs=1&to=${contractor.email}&su=${subject}&body=${body}`,
+      `https://mail.google.com/mail/?view=cm&fs=1&to=${displayEmail}&su=${subject}&body=${body}`,
       "_blank",
     );
   };
@@ -184,13 +222,15 @@ const filteredPastJobs = pastJobsData.filter((job) => {
         Contractors
       </button>
 
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
       <div className="bg-white rounded-xl shadow-sm border border-[#E8E8E8] overflow-visible md:relative">
         {/* Avatar */}
         <div className="md:absolute md:left-4 md:top-2/4 md:translate-y-[-46%] md:z-10 flex sm:block justify-center pt-5 md:pt-0 px-6 md:px-0">
           <div className="w-[90px] h-[90px] sm:w-[100px] sm:h-[100px] lg:h-[130px] lg:w-[130px] rounded-full bg-[#EAEAEA] border-[3px] border-white shadow-md overflow-hidden shrink-0">
             <img
               src={placeholderUser}
-              alt={contractor.name}
+              alt={displayName}
               className="w-full h-full object-cover"
             />
           </div>
@@ -201,9 +241,9 @@ const filteredPastJobs = pastJobsData.filter((job) => {
           <div className="flex-1 min-w-0 text-center sm:text-left w-full sm:w-auto">
             <div className="flex items-center justify-center sm:justify-start gap-2">
               <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-[#1B2D6B] leading-tight text-nowrap">
-                {contractor.name}
+                {displayName}
               </h1>
-              {contractor.verified && (
+              {contractor?.status === "active" && (
                 <BadgeCheckIcon
                   fill="#03C95A"
                   className="text-white shrink-0"
@@ -211,7 +251,7 @@ const filteredPastJobs = pastJobsData.filter((job) => {
               )}
             </div>
             <p className="text-[#1D3461] text-xs sm:text-sm lg:text-base mt-0.5 font-normal text-nowrap">
-              {contractor.company}
+              {contractor?.contractorCode || ""}
             </p>
           </div>
 
@@ -253,13 +293,11 @@ const filteredPastJobs = pastJobsData.filter((job) => {
                   </p>
                   <div className="flex gap-3">
                     <button
-                      onClick={() => {
-                        setIsActive(!isActive);
-                        setShowConfirmTooltip(false);
-                      }}
-                      className="flex-1 bg-[#03C95A] hover:bg-[#008f35] text-white py-2 rounded-md font-medium transition-colors cursor-pointer"
+                      onClick={handleToggleStatus}
+                      disabled={actionLoading}
+                      className="flex-1 bg-[#03C95A] hover:bg-[#008f35] text-white py-2 rounded-md font-medium transition-colors cursor-pointer disabled:opacity-50"
                     >
-                      Yes
+                      {actionLoading ? "Please wait..." : "Yes"}
                     </button>
                     <button
                       onClick={() => setShowConfirmTooltip(false)}
@@ -282,27 +320,25 @@ const filteredPastJobs = pastJobsData.filter((job) => {
             <CreditCard size={18} />
             <span className="text-[#1D3461]">Contractor ID :</span>
             <span className="font-normal text-[#1D3461]">
-              {contractor.contractorId}
+              {contractor?.contractorCode || "-"}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <Calendar size={18} />
             <span className="text-[#1D3461]">Added on :</span>
             <span className="font-normal text-[#1D3461]">
-              {contractor.addedOn}
+              {contractor
+                ? dayjs(contractor.createdAt).format("Do MMM YYYY")
+                : "-"}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[#1D3461]">USDOT:</span>
-            <span className="font-normal text-[#1D3461]">
-              {contractor.usdot}
-            </span>
+            <span className="font-normal text-[#1D3461]">{usdot}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[#1D3461]">TxDOT:</span>
-            <span className="font-normal text-[#1D3461]">
-              {contractor.txdot}
-            </span>
+            <span className="font-normal text-[#1D3461]">{txdot}</span>
           </div>
         </div>
       </div>
@@ -330,7 +366,7 @@ const filteredPastJobs = pastJobsData.filter((job) => {
               Phone
             </span>
             <span className="text-sm text-[#374151] font-medium truncate sm:ml-10 ml-0">
-              {contractor.phone}
+              {displayPhone}
             </span>
           </div>
 
@@ -340,7 +376,7 @@ const filteredPastJobs = pastJobsData.filter((job) => {
               Address
             </span>
             <span className="text-sm text-[#374151] font-medium sm:ml-10 ml-0 leading-snug md:text-start flex-1">
-              {contractor.address}
+              {displayAddress}
             </span>
           </div>
 
@@ -350,10 +386,10 @@ const filteredPastJobs = pastJobsData.filter((job) => {
               Email
             </span>
             <a
-              href={`mailto:${contractor.email}`}
+              href={`mailto:${displayEmail}`}
               className="text-sm text-[#233B73] font-medium hover:underline truncate sm:ml-10 ml-0"
             >
-              {contractor.email}
+              {displayEmail}
             </a>
             <button className="text-[#9CA3AF] hover:text-[#6B7280] transition-colors ml-1 shrink-0 cursor-pointer">
               <CopyIcon size={18} />
@@ -366,7 +402,7 @@ const filteredPastJobs = pastJobsData.filter((job) => {
         {/* Tab bar */}
         <div className="flex border-b border-[#E8E8E8] overflow-x-auto scrollbar-hide justify-start lg:justify-between flex-wrap">
           {TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
+            const isTabActive = activeTab === tab.key;
             return (
               <button
                 key={tab.key}
@@ -376,14 +412,14 @@ const filteredPastJobs = pastJobsData.filter((job) => {
                   text-[11px] sm:text-sm font-medium whitespace-nowrap
                   transition-colors border-b-2 flex-shrink-0 cursor-pointer
                   ${
-                    isActive
+                    isTabActive
                       ? "border-[#F26522] text-[#F26522]"
                       : "border-transparent text-[#6B7280] hover:text-[#374151]"
                   }
                 `}
               >
                 <span
-                  className={isActive ? "text-[#F26522]" : "text-[#9CA3AF]"}
+                  className={isTabActive ? "text-[#F26522]" : "text-[#9CA3AF]"}
                 >
                   {tab.icon}
                 </span>
@@ -397,8 +433,11 @@ const filteredPastJobs = pastJobsData.filter((job) => {
         {activeTab === "overview" && (
           <div className="space-y-3">
             {/* Drivers section */}
-
-            <DriverSection />
+            <DriverSection
+              drivers={contractor?.drivers}
+              loading={loading}
+              contractorId={id}
+            />
 
             {/* Truck Details section */}
             <div className="border border-[#E5E7EB]">
@@ -409,13 +448,27 @@ const filteredPastJobs = pastJobsData.filter((job) => {
                 <CommonButton
                   variant="primary"
                   size="sm"
-                  onClick={() => navigate("/contractors/add-truck")}
+                  onClick={() =>
+                    navigate("/contractors/add-truck", {
+                      state: { contractorId: id },
+                    })
+                  }
                 >
                   Add Truck
                 </CommonButton>
               </div>
               <Table
-                data={truckTableData}
+                data={
+                  contractor
+                    ? contractor.trucks.map((t) => ({
+                        id: t._id,
+                        truckId: t.unitNumber,
+                        truckName: t.truckName ?? "-",
+                        capacity: "-",
+                        truckStatus: t.operationalStatus,
+                      }))
+                    : truckTableData
+                }
                 columns={truckColumns}
                 isCheckbox={false}
                 minWidth="min-w-[600px]"
@@ -440,20 +493,20 @@ const filteredPastJobs = pastJobsData.filter((job) => {
               {/* Total + Search */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-3 sm:px-4 pb-3 border-t border-[#E5E7EB] pt-4">
                 <p className="text-sm font-bold text-[#1B2D6B]">
-                  Total No of Jobs : 45
+                  Total No of Jobs : {contractor?.jobsTotal ?? 45}
                 </p>
                 <div className="relative w-full sm:w-auto">
                   <Search
                     size={14}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
                   />
-                 <input
-  type="text"
-  placeholder="Search"
-  value={jobSearch}
-  onChange={(e) => setJobSearch(e.target.value)}
-  className="w-full sm:w-56 pl-9 pr-4 h-9 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#233B73] bg-white"
-/>
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={jobSearch}
+                    onChange={(e) => setJobSearch(e.target.value)}
+                    className="w-full sm:w-56 pl-9 pr-4 h-9 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#233B73] bg-white"
+                  />
                 </div>
               </div>
 
@@ -496,11 +549,11 @@ const filteredPastJobs = pastJobsData.filter((job) => {
                   </div>
                 ))}
               </div>
-                {filteredPastJobs.length === 0 && (
-  <p className="w-[98%] mx-auto mb-5 h-20 border border-[#E5E7EB] rounded-lg flex items-center justify-center text-[#6B7280]">
-    No jobs found
-  </p>
-)}
+              {filteredPastJobs.length === 0 && (
+                <p className="w-[98%] mx-auto mb-5 h-20 border border-[#E5E7EB] rounded-lg flex items-center justify-center text-[#6B7280]">
+                  No jobs found
+                </p>
+              )}
 
               <div className="flex justify-center pb-5">
                 <CommonButton size="sm">View All</CommonButton>
@@ -509,9 +562,21 @@ const filteredPastJobs = pastJobsData.filter((job) => {
           </div>
         )}
 
-        {activeTab === "drivers" && <DriverSection />}
+        {activeTab === "drivers" && (
+          <DriverSection
+            drivers={contractor?.drivers}
+            loading={loading}
+            contractorId={id}
+          />
+        )}
         {activeTab === "amount-paid" && <AmountPaidTab />}
-        {activeTab === "truck-details" && <TruckDetailsTab />}
+        {activeTab === "truck-details" && (
+          <TruckDetailsTab
+            trucks={contractor?.trucks}
+            drivers={contractor?.drivers}
+            loading={loading}
+          />
+        )}
         {activeTab === "tickets" && <TicketsTab />}
         {activeTab === "statement" && <SettlementStatementTab />}
       </div>
@@ -519,11 +584,14 @@ const filteredPastJobs = pastJobsData.filter((job) => {
       <AddJobModal
         open={showAddJobModal}
         onClose={() => setShowAddJobModal(false)}
+        onSuccess={fetchContractor}
       />
       <ContractorModal
         open={openEditContractorModal}
         onClose={() => setOpenEditContractorModal(false)}
         isEdit
+        editData={contractor}
+        onSuccess={fetchContractor}
       />
 
       {openCallModal && (
@@ -558,10 +626,10 @@ const filteredPastJobs = pastJobsData.filter((job) => {
                 />
 
                 <h2 className="mt-5 text-white text-[24px] font-bold">
-                  John Mason
+                  {displayName}
                 </h2>
 
-                <p className="text-white text-[16px] mt-2">+1 458 7877 879</p>
+                <p className="text-white text-[16px] mt-2">{displayPhone}</p>
 
                 <p className="text-white text-[16px] mt-2">Voice Call</p>
 

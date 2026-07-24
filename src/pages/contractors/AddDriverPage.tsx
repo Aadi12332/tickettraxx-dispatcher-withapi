@@ -1,12 +1,13 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { MoveLeft } from "lucide-react";
 import placeholderIcon from "../../assets/icons/placeholderImg.svg";
-import backgroundImg from "../../assets/images/Rectangle.jpg";
 import CommonFileUpload from "../../components/common/CommonFileUpload";
 import CommonButton from "../../components/common/CommonButton";
 import ToastModal from "../../components/common/modal/ToastModal";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LightSelect from "./LightSelect";
+import { createDriverApi } from "../../services/auth.service";
+
 const LightInput = ({ label, type = "text", ...props }: any) => (
   <div className="relative w-full h-[65px] border border-[#E5E7EB] rounded-[5px] bg-white px-4 pt-2 ">
     <label className="block text-xs font-medium text-[#6B7280]">{label}</label>
@@ -87,35 +88,17 @@ export const parkingLocationOptions = [
   { label: "Ironwood Depot", value: "Ironwood Depot" },
 ];
 
-// const LightSelect = ({ label, options }: any) => (
-//   <div className="relative w-full h-[65px] border border-[#E5E7EB] rounded-[5px] bg-white px-4 pt-2 ">
-//     <label className="block text-xs font-medium text-[#6B7280]">{label}</label>
-//     <div className="flex items-center justify-between mt-1">
-//       <select className="w-full bg-transparent max-h-[200px] text-sm text-[#1B2D6B] font-medium outline-none appearance-none cursor-pointer">
-//         <option value="" disabled selected>
-//           Select one
-//         </option>
-//         {options.map((opt: string) => (
-//           <option key={opt} value={opt}>
-//             {opt}
-//           </option>
-//         ))}
-//       </select>
-//       <ChevronDown size={16} className="text-[#6B7280] pointer-events-none" />
-//     </div>
-//   </div>
-// );
-
 const DocumentUpload = ({
   title,
-  previewImg,
+  previewUrl,
+  onFileSelect,
 }: {
   title: string;
-  previewImg: string;
+  previewUrl: string | null;
+  onFileSelect: (file: File | null) => void;
 }) => (
   <div className="mb-8">
     <div className="flex flex-col md:flex-row gap-6 justify-between">
-      {/* Upload Area */}
       <div className="flex-2 flex flex-col">
         <h3 className="text-[#1B2D6B] text-base font-semibold mb-3">{title}</h3>
         <div className="flex-1 border-2 border-dashed border-[#d1d5db] rounded-lg bg-[#F2F2F7] flex flex-col items-center justify-center min-h-[220px]">
@@ -126,23 +109,33 @@ const DocumentUpload = ({
             </p>
             <p className="text-[#9CA3AF] text-sm  ">or</p>
             <div className="flex items-center gap-2 transition-colors mb-2">
-              <CommonFileUpload label="Upload Image" />
+             <CommonFileUpload
+  label="Upload Image"
+  onChange={onFileSelect}
+/>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Preview Area */}
       <div className="flex flex-col">
         <h4 className="text-[#1B2D6B] text-base font-semibold mb-3">
           Preview {title.replace(" Picture", "")}
         </h4>
-        <div className="border border-[#E8E8E8] rounded-lg overflow-hidden h-[259px] w-[272px] bg-white flex items-center justify-center  relative">
-          <img
-            src={previewImg}
-            alt="Preview"
-            className="w-full h-full object-contain"
-          />
+        <div className="border border-[#E8E8E8] rounded-lg overflow-hidden h-[259px] w-[272px] bg-white flex items-center justify-center relative">
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="w-full h-full object-cover rounded-lg"
+            />
+          ) : (
+            <img
+              src={placeholderIcon}
+              alt="No file selected"
+              className="w-16 h-16 opacity-40 object-contain"
+            />
+          )}
         </div>
       </div>
     </div>
@@ -151,14 +144,93 @@ const DocumentUpload = ({
 
 const AddDriverPage = () => {
   const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const contractorId = (location.state as { contractorId?: string } | null)
+    ?.contractorId;
+
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [parking, setParking] = useState("");
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [cdlFile, setCdlFile] = useState<File | null>(null);
+  const [medicalCardFile, setMedicalCardFile] = useState<File | null>(null);
+  const [cdlPreviewUrl, setCdlPreviewUrl] = useState<string | null>(null);
+const [medicalCardPreviewUrl, setMedicalCardPreviewUrl] = useState<string | null>(null);
+
+  const handleCdlSelect = (file: File | null) => {
+    setCdlFile(file);
+    setCdlPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  };
+
+  const handleMedicalCardSelect = (file: File | null) => {
+    setMedicalCardFile(file);
+    setMedicalCardPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (cdlPreviewUrl) URL.revokeObjectURL(cdlPreviewUrl);
+      if (medicalCardPreviewUrl) URL.revokeObjectURL(medicalCardPreviewUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+const handleSubmit = async () => {
+  if (!name.trim()) {
+    setError("Name is required.");
+    return;
+  }
+
+  if (!contractorId) {
+    setError("Missing contractor reference — please go back and try again.");
+    return;
+  }
+
+  setError("");
+  setSubmitting(true);
+  try {
+    const fd = new FormData();
+    fd.append("name", name);
+    fd.append("contractorId", contractorId);
+    if (state) fd.append("state", state);
+    if (city) fd.append("city", city);
+    if (address) fd.append("address", address);
+    if (parking) fd.append("parkingLocation", parking);
+    if (phone) fd.append("phone", phone);
+    if (email) fd.append("email", email);
+    if (medicalCardFile) fd.append("medicalCard", medicalCardFile);
+    if (cdlFile) fd.append("cdl", cdlFile);
+
+    await createDriverApi(fd);
+
+    setOpen(true);
+    setTimeout(() => {
+      setOpen(false);
+      navigate(-1);
+    }, 2000);
+  } catch (err) {
+    console.error("Failed to add driver:", err);
+    setError("Failed to add driver. Please try again.");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <div className="pb-10">
-      {/* Header section */}
       <div className="flex items-start gap-4 mb-8 flex-wrap">
         <CommonButton
           onClick={() => navigate(-1)}
@@ -178,54 +250,63 @@ const AddDriverPage = () => {
         </div>
       </div>
 
-      {/* Form Fields Grid */}
+      {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <LightInput label="Name" />
+        <LightInput
+          label="Name"
+          value={name}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+        />
 
-<LightSelect
-  label="State"
-  value={state}
-  options={stateOptions}
-  onChange={setState}
-/>
+        <LightSelect label="State" value={state} options={stateOptions} onChange={setState} />
+        <LightSelect label="City" value={city} options={cityOptions} onChange={setCity} />
+        <LightSelect
+          label="Parking Location"
+          value={parking}
+          options={parkingLocationOptions}
+          onChange={setParking}
+        />
 
-<LightSelect
-  label="City"
-  value={city}
-  options={cityOptions}
-  onChange={setCity}
-/>
-
-<LightSelect
-  label="Parking Location"
-  value={parking}
-  options={parkingLocationOptions}
-  onChange={setParking}
-/>
-
-        <LightInput label="Address" />
-        <LightInput label="Email" type="email" />
-        <LightInput label="Phone" type="tel" />
+        <LightInput
+          label="Address"
+          value={address}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddress(e.target.value)}
+        />
+        <LightInput
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+        />
+        <LightInput
+          label="Phone"
+          type="tel"
+          value={phone}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
+        />
       </div>
 
-      {/* Document Upload Sections */}
-      <DocumentUpload title="CDL Picture" previewImg={backgroundImg} />
+      <DocumentUpload
+        title="CDL Picture"
+        previewUrl={cdlPreviewUrl}
+        onFileSelect={handleCdlSelect}
+      />
 
-      <DocumentUpload title="Medical Card Picture" previewImg={backgroundImg} />
+      <DocumentUpload
+        title="Medical Card Picture"
+        previewUrl={medicalCardPreviewUrl}
+        onFileSelect={handleMedicalCardSelect}
+      />
 
-      {/* Submit Action */}
       <div className="flex justify-end mt-10">
         <CommonButton
           variant="primary"
           size="lg"
-          onClick={() => {
-            setOpen(true);
-            setTimeout(() => {
-              setOpen(false);
-            }, 2000);
-          }}
+          onClick={handleSubmit}
+          disabled={submitting}
         >
-          Add Driver
+          {submitting ? "Adding..." : "Add Driver"}
         </CommonButton>
       </div>
       <ToastModal

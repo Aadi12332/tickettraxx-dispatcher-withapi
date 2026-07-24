@@ -1,16 +1,20 @@
 import axiosInstance from "./axiosInstance";
 import {
   API_CONSTANTS,
+  ASSIGNMENT_ENDPOINTS,
   AUTH_ENDPOINTS,
+  CONTRACTOR_ACTION_ENDPOINTS,
   CONTRACTOR_ENDPOINTS,
   CUSTOMER_ENDPOINTS,
   DASHBOARD_ENDPOINTS,
   DISPATCH_ENDPOINTS,
+  DRIVER_ENDPOINTS,
   FSC_ENDPOINTS,
   JOB_ENDPOINTS,
   LOAD_ENDPOINTS,
   MATERIAL_ENDPOINTS,
   NOTIFICATION_ENDPOINTS,
+  TRUCK_ENDPOINTS,
 } from "../constants/api.constants";
 import type {
   LoginPayload,
@@ -40,6 +44,7 @@ import type {
   ContractorListResponse,
   ContractorPayload,
   ContractorResponse,
+  ContractorDetailResponse,
   JobListResponse,
   CreateJobPayload,
   JobResponse,
@@ -49,8 +54,15 @@ import type {
   CreateLoadPayload,
   LoadListResponse,
   UpdateLoadPayload,
+  DriverResponse,
+  TruckResponse,
+  TruckListResponse,
+  AssignmentListResponse,
+  CreateDispatchPayload,
+  DispatchResponse,
 } from "../types/auth.types";
 
+// ---------- Auth ----------
 export const loginApi = async (
   payload: LoginPayload,
 ): Promise<LoginResponse> => {
@@ -91,11 +103,11 @@ export const resetPasswordApi = async (
   return data;
 };
 
+// ---------- Notifications / Alerts ----------
 export const getNotificationsApi = async (): Promise<NotificationResponse> => {
   const { data } = await axiosInstance.get<NotificationResponse>(
     NOTIFICATION_ENDPOINTS.NOTIFICATIONS,
   );
-
   return data;
 };
 
@@ -103,7 +115,6 @@ export const getAlertsApi = async (): Promise<AlertResponse> => {
   const { data } = await axiosInstance.get<AlertResponse>(
     NOTIFICATION_ENDPOINTS.ALERTS,
   );
-
   return data;
 };
 
@@ -111,7 +122,6 @@ export const markNotificationReadApi = async (notificationId: string) => {
   const { data } = await axiosInstance.patch(
     NOTIFICATION_ENDPOINTS.MARK_READ(notificationId),
   );
-
   return data;
 };
 
@@ -119,15 +129,24 @@ export const markAllNotificationsReadApi = async () => {
   const { data } = await axiosInstance.post(
     NOTIFICATION_ENDPOINTS.MARK_ALL_READ,
   );
-
   return data;
 };
 
+// ---------- Dispatch ----------
 export const getDispatchesApi = async (page = 1, limit = 10) => {
   const { data } = await axiosInstance.get(
     `${DISPATCH_ENDPOINTS.GET_DISPATCHES}?page=${page}&limit=${limit}`,
   );
+  return data;
+};
 
+export const createDispatchApi = async (
+  payload: CreateDispatchPayload,
+): Promise<DispatchResponse> => {
+  const { data } = await axiosInstance.post<DispatchResponse>(
+    DISPATCH_ENDPOINTS.CREATE_DISPATCH,
+    payload,
+  );
   return data;
 };
 
@@ -135,10 +154,10 @@ export const exportDispatchApi = async (id: string) => {
   const { data } = await axiosInstance.get(
     DISPATCH_ENDPOINTS.EXPORT_DISPATCH(id),
   );
-
   return data;
 };
 
+// ---------- Materials ----------
 export const getMaterialsApi = async (
   page = 1,
   limit = 20,
@@ -175,6 +194,7 @@ export const deleteMaterialApi = async (id: string): Promise<void> => {
   await axiosInstance.delete(MATERIAL_ENDPOINTS.MATERIAL_BY_ID(id));
 };
 
+// ---------- Customers ----------
 export const getCustomersApi = async (
   page = 1,
   limit = 100,
@@ -187,13 +207,11 @@ export const getCustomersApi = async (
 };
 
 export const createCustomerApi = async (name: string) => {
-  const { data } = await axiosInstance.post("/customers", {
-    name,
-  });
-
+  const { data } = await axiosInstance.post("/customers", { name });
   return data;
 };
 
+// ---------- FSC ----------
 export const getFscApi = async (
   page = 1,
   limit = 20,
@@ -229,6 +247,7 @@ export const deleteFscApi = async (id: string): Promise<void> => {
   await axiosInstance.delete(FSC_ENDPOINTS.FSC_BY_ID(id));
 };
 
+// ---------- Sites ----------
 export const siteService = {
   getSites: async (params?: {
     page?: number;
@@ -269,54 +288,62 @@ export const siteService = {
 
 export const getContractorsApi = async (
   page = 1,
-  limit = 20
+  limit = 20,
 ): Promise<ContractorListResponse> => {
   const { data } = await axiosInstance.get<ContractorListResponse>(
     CONTRACTOR_ENDPOINTS.CONTRACTORS,
-    { params: { page, limit } }
+    { params: { page, limit } },
   );
   return data;
 };
- 
-export const createContractorApi = async (
-  payload: FormData
-) => {
-  const { data } = await axiosInstance.post(
-    CONTRACTOR_ENDPOINTS.CONTRACTORS,
-    payload
-  );
 
+export const getContractorByIdApi = async (
+  id: string,
+): Promise<ContractorDetailResponse> => {
+  const { data } = await axiosInstance.get<ContractorDetailResponse>(
+    CONTRACTOR_ENDPOINTS.CONTRACTOR_BY_ID(id),
+  );
+  return data;
+};
+
+export const createContractorApi = async (
+  payload: ContractorPayload | FormData,
+): Promise<ContractorResponse> => {
+  const { data } = await axiosInstance.post<ContractorResponse>(
+    CONTRACTOR_ENDPOINTS.CONTRACTORS,
+    payload,
+  );
   return data;
 };
 
 export const updateContractorApi = async (
   id: string,
-  payload: ContractorPayload | { status: string }
-) => {
-  const { data } = await axiosInstance.patch(
-    `${CONTRACTOR_ENDPOINTS.CONTRACTORS}/${id}`,
-    payload
+  payload: Partial<ContractorPayload> | { status: string },
+): Promise<ContractorResponse> => {
+  const { data } = await axiosInstance.patch<ContractorResponse>(
+    CONTRACTOR_ENDPOINTS.CONTRACTOR_BY_ID(id),
+    payload,
   );
-
   return data;
 };
- 
+
+// Contract/COI files alag se, PATCH + multipart/form-data
 export const uploadContractorFilesApi = async (
   id: string,
-  formData: FormData
+  formData: FormData,
 ) => {
   const { data } = await axiosInstance.patch(
-    `${CONTRACTOR_ENDPOINTS.CONTRACTORS}/${id}`,
-    formData
+    CONTRACTOR_ENDPOINTS.CONTRACTOR_BY_ID(id),
+    formData,
   );
-
   return data;
 };
- 
+
 export const deleteContractorApi = async (id: string): Promise<void> => {
   await axiosInstance.delete(CONTRACTOR_ENDPOINTS.CONTRACTOR_BY_ID(id));
 };
 
+// ---------- Jobs ----------
 export const getJobsApi = async (
   page = 1,
   limit = 20,
@@ -353,12 +380,14 @@ export const deleteJobApi = async (id: string): Promise<void> => {
   await axiosInstance.delete(JOB_ENDPOINTS.JOB_BY_ID(id));
 };
 
-export const getDispatcherDashboardApi = async (): Promise<DispatcherDashboardResponse> => {
-  const { data } = await axiosInstance.get<DispatcherDashboardResponse>(
-    DASHBOARD_ENDPOINTS.DISPATCHER
-  );
-  return data;
-};
+// ---------- Dashboard ----------
+export const getDispatcherDashboardApi =
+  async (): Promise<DispatcherDashboardResponse> => {
+    const { data } = await axiosInstance.get<DispatcherDashboardResponse>(
+      DASHBOARD_ENDPOINTS.DISPATCHER,
+    );
+    return data;
+  };
 
 export const getLoadsApi = async (
   page = 1,
@@ -394,4 +423,77 @@ export const updateLoadApi = async (
 
 export const deleteLoadApi = async (id: string): Promise<void> => {
   await axiosInstance.delete(LOAD_ENDPOINTS.LOAD_BY_ID(id));
+};
+
+export const deactivateContractorApi = async (id: string) => {
+  const { data } = await axiosInstance.post(
+    CONTRACTOR_ACTION_ENDPOINTS.DEACTIVATE(id),
+  );
+  return data;
+};
+
+export const reactivateContractorApi = async (id: string) => {
+  const { data } = await axiosInstance.post(
+    CONTRACTOR_ACTION_ENDPOINTS.REACTIVATE(id),
+  );
+  return data;
+};
+
+export const createDriverApi = async (
+  formData: FormData,
+): Promise<DriverResponse> => {
+  const { data } = await axiosInstance.post<DriverResponse>(
+    DRIVER_ENDPOINTS.DRIVERS,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return data;
+};
+
+export const createTruckApi = async (
+  formData: FormData,
+): Promise<TruckResponse> => {
+  const { data } = await axiosInstance.post<TruckResponse>(
+    TRUCK_ENDPOINTS.TRUCKS,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return data;
+};
+
+export const getTrucksApi = async (
+  page = 1,
+  limit = 100,
+  contractorId?: string,
+): Promise<TruckListResponse> => {
+  const { data } = await axiosInstance.get<TruckListResponse>(
+    TRUCK_ENDPOINTS.TRUCKS,
+    { params: { page, limit, contractorId } },
+  );
+  return data;
+};
+
+export const getAssignmentsApi = async (): Promise<AssignmentListResponse> => {
+  const { data } = await axiosInstance.get<AssignmentListResponse>(
+    ASSIGNMENT_ENDPOINTS.ASSIGNMENTS,
+  );
+  return data;
+};
+
+export const getAssignmentMatrixApi = async (date: string) => {
+  const { data,footer }:any = await axiosInstance.get(
+    `${ASSIGNMENT_ENDPOINTS.ASSIGNMENTS}/matrix`,
+    {
+      params: { date },
+    }
+  );
+  return { data, footer };
+};
+
+export const getLoadsByDispatchIdApi = async (dispatchId: string) => {
+  const { data } = await axiosInstance.get(
+    `${LOAD_ENDPOINTS.LOADS}?dispatchId=${dispatchId}`
+  );
+
+  return data;
 };
