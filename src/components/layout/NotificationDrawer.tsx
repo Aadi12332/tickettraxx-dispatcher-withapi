@@ -20,9 +20,7 @@ export default function NotificationDrawer({
   open,
   onClose,
 }: NotificationDrawerProps) {
-  const [tab, setTab] = useState<"notifications" | "alerts">(
-    "notifications"
-  );
+  const [tab, setTab] = useState<"notifications" | "alerts">("notifications");
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [alerts, setAlerts] = useState<NotificationItem[]>([]);
@@ -81,8 +79,8 @@ export default function NotificationDrawer({
                 ...item,
                 read: true,
               }
-            : item
-        )
+            : item,
+        ),
       );
 
       setUnread((prev) => Math.max(prev - 1, 0));
@@ -97,7 +95,7 @@ export default function NotificationDrawer({
         prev.map((item) => ({
           ...item,
           read: true,
-        }))
+        })),
       );
 
       setUnread(0);
@@ -106,29 +104,19 @@ export default function NotificationDrawer({
 
   if (!open) return null;
 
-  const currentItems =
-    tab === "notifications" ? notifications : alerts;
+  const currentItems = tab === "notifications" ? notifications : alerts;
 
-      return (
+  return (
     <>
-      <div
-        onClick={onClose}
-        className="fixed inset-0 bg-black/40 z-[999]"
-      />
+      <div onClick={onClose} className="fixed inset-0 bg-black/40 z-[999]" />
 
       <div className="fixed top-0 right-0 h-screen w-full max-w-[500px] bg-white z-[1000] flex flex-col">
-
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#315497]">
-
           <div>
-            <h2 className="text-[20px] font-semibold">
-              Notifications
-            </h2>
+            <h2 className="text-[20px] font-semibold">Notifications</h2>
 
             {tab === "notifications" && unread > 0 && (
-              <p className="text-sm text-red-500 mt-1">
-                {unread} unread
-              </p>
+              <p className="text-sm text-red-500 mt-1">{unread} unread</p>
             )}
           </div>
 
@@ -138,7 +126,6 @@ export default function NotificationDrawer({
         </div>
 
         <div className="flex border-b">
-
           <button
             onClick={() => setTab("notifications")}
             className={`flex-1 py-3 font-medium cursor-pointer ${
@@ -160,158 +147,97 @@ export default function NotificationDrawer({
           >
             Alerts
           </button>
-
         </div>
-
-        {tab === "notifications" &&
-          notifications.length > 0 && (
-            <div className="p-3 border-b flex justify-end">
-
-              <button
-                onClick={markAllRead}
-                className="text-sm text-[#315497] font-medium"
-              >
-                Mark All Read
-              </button>
-
-            </div>
-          )}
 
         <div className="flex-1 overflow-y-auto p-5">
-
-          {loading && (
-            <div className="text-center py-10">
-              Loading...
-            </div>
-          )}
+          {loading && <div className="text-center py-10">Loading...</div>}
 
           {!loading && error && (
-            <div className="text-center text-red-500">
-              {error}
+            <div className="text-center text-red-500">{error}</div>
+          )}
+
+          {!loading && !error && currentItems.length > 0 && (
+            <div className="space-y-4">
+              {currentItems.map((item) => (
+                <div
+                  key={item._id}
+                  onClick={() => {
+                    setSelectedNotification(item);
+
+                    if (tab === "notifications" && !item.read) {
+                      markRead(item._id);
+                    }
+                  }}
+                  className={`rounded-xl border p-4 cursor-pointer transition shadow-sm hover:shadow-md ${
+                    !item.read && tab === "notifications"
+                      ? "bg-blue-50 border-blue-300"
+                      : "border-[#E5E5E5]"
+                  }`}
+                >
+                  <div className="flex justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-[16px]">
+                        {item.title}
+                      </h3>
+
+                      <p className="text-sm text-[#8A8A8A] mt-1">
+                        {item.message}
+                      </p>
+
+                      <p className="text-xs text-gray-400 mt-2">
+                        {new Date(item.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+
+                    {tab === "notifications" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+
+                          // TODO: Call delete notification API once backend provides it.
+                        }}
+                        className="text-red-500 cursor-pointer"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
-          {!loading &&
-            !error &&
-            currentItems.length > 0 && (
+          {!loading && !error && currentItems.length === 0 && (
+            <div className="h-full flex flex-col justify-center items-center">
+              <img src={NotiIcon} className="w-60" />
 
-              <div className="space-y-4">
+              <h3 className="text-xl mt-6">No {tab}</h3>
 
-                {currentItems.map((item) => (
-
-                  <div
-                    key={item._id}
-                    onClick={() => {
-
-                      setSelectedNotification(item);
-
-                      if (
-                        tab === "notifications" &&
-                        !item.read
-                      ) {
-                        markRead(item._id);
-                      }
-                    }}
-                    className={`rounded-xl border p-4 cursor-pointer transition shadow-sm hover:shadow-md ${
-                      !item.read && tab === "notifications"
-                        ? "bg-blue-50 border-blue-300"
-                        : "border-[#E5E5E5]"
-                    }`}
-                  >
-
-                    <div className="flex justify-between gap-4">
-
-                      <div className="flex-1">
-
-                        <h3 className="font-semibold text-[16px]">
-
-                          {item.title}
-
-                        </h3>
-
-                        <p className="text-sm text-[#8A8A8A] mt-1">
-
-                          {item.message}
-
-                        </p>
-
-                        <p className="text-xs text-gray-400 mt-2">
-
-                          {new Date(
-                            item.createdAt
-                          ).toLocaleString()}
-
-                        </p>
-
-                      </div>
-
-                      {tab === "notifications" && (
-
-                       <button
-  onClick={(e) => {
-    e.stopPropagation();
-
-    // TODO: Call delete notification API once backend provides it.
-  }}
-  className="text-red-500 cursor-pointer"
->
-  <Trash2 size={18} />
-</button>
-
-                      )}
-
-                    </div>
-
-                  </div>
-
-                ))}
-
-              </div>
-
-            )}
-
-          {!loading &&
-            !error &&
-            currentItems.length === 0 && (
-
-              <div className="h-full flex flex-col justify-center items-center">
-
-                <img
-                  src={NotiIcon}
-                  className="w-60"
-                />
-
-                <h3 className="text-xl mt-6">
-
-                  No {tab}
-
-                </h3>
-
-                <p className="text-gray-500">
-
-                  {tab === "notifications"
-                    ? "Notification Inbox Empty"
-                    : "No Alerts Found"}
-
-                </p>
-
-              </div>
-
-            )}
-
+              <p className="text-gray-500">
+                {tab === "notifications"
+                  ? "Notification Inbox Empty"
+                  : "No Alerts Found"}
+              </p>
+            </div>
+          )}
         </div>
 
-
-                {tab === "notifications" && notifications.length > 0 && (
-          <div className="p-3 flex justify-center border-t">
-           <button
-  onClick={() => {
-    // TODO: Call delete all notifications API once backend provides it.
-  }}
-  className="h-12 px-6 rounded-lg border border-[#FF5B73] text-[#FF5B73] text-sm font-medium"
->
-  Delete All Notifications
-</button>
+        {tab === "notifications" && notifications.length > 0 && (
+          <div className="p-3 flex justify-between items-center border-t">
+            <button
+              onClick={() => {
+                // TODO: Call delete all notifications API once backend provides it.
+              }}
+              className="h-10 px-4 rounded-lg border border-[#FF5B73] text-[#FF5B73] text-sm font-medium"
+            >
+              Delete All Notifications
+            </button>
+             <button
+              onClick={markAllRead}
+              className="h-10 px-4 rounded-lg border border-[#315497] text-sm font-medium text-[#315497]"
+            >
+              Mark All Read
+            </button>
           </div>
         )}
       </div>
@@ -324,61 +250,48 @@ export default function NotificationDrawer({
           />
 
           <div className="fixed inset-0 z-[1101] flex items-center justify-center px-5">
-
             <div className="w-full max-w-[700px] bg-white rounded-xl overflow-hidden shadow-xl">
-
               <div className="flex items-center justify-between px-5 py-4 border-b border-[#315497]">
-
                 <div>
-
                   <h2 className="text-[20px] font-semibold">
                     {selectedNotification.title}
                   </h2>
 
                   <p className="text-sm text-gray-400 mt-1">
-                    {new Date(
-                      selectedNotification.createdAt
-                    ).toLocaleString()}
+                    {new Date(selectedNotification.createdAt).toLocaleString()}
                   </p>
-
                 </div>
 
-                <button className="cursor-pointer"
+                <button
+                  className="cursor-pointer"
                   onClick={() => setSelectedNotification(null)}
                 >
                   <X size={20} />
                 </button>
-
               </div>
 
               <div className="px-5 py-5">
-
                 <div className="mb-4">
-
                   <span
                     className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
                       selectedNotification.severity === "error"
                         ? "bg-red-100 text-red-600"
                         : selectedNotification.severity === "warning"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : selectedNotification.severity === "success"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-blue-100 text-blue-700"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : selectedNotification.severity === "success"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-blue-100 text-blue-700"
                     }`}
                   >
                     {selectedNotification.severity}
                   </span>
-
                 </div>
 
                 <p className="text-[#6B7280] leading-7 whitespace-pre-wrap">
                   {selectedNotification.message}
                 </p>
-
               </div>
-
             </div>
-
           </div>
         </>
       )}
