@@ -130,27 +130,6 @@ export default function NotificationDrawer({
     }
   };
 
-  const deleteAllNotifications = async () => {
-    try {
-      await deleteAllNotificationsApi();
-      setNotifications([]);
-      setUnread(0);
-      setSelectedNotification(null);
-    } catch (err) {
-      console.error("Failed to delete all notifications:", err);
-    }
-  };
-
-  const deleteAllAlerts = async () => {
-    try {
-      await deleteAllAlertsApi();
-      setAlerts([]);
-      setSelectedNotification(null);
-    } catch (err) {
-      console.error("Failed to delete all alerts:", err);
-    }
-  };
-
   const confirmDeleteAll = async () => {
     try {
       if (deleteType === "notifications") {
