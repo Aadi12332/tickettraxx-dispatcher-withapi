@@ -497,3 +497,15 @@ export const getLoadsByDispatchIdApi = async (dispatchId: string) => {
 
   return data;
 };
+
+export const deleteNotificationApi = async (id: string): Promise<void> => {
+  await axiosInstance.delete(NOTIFICATION_ENDPOINTS.DELETE_NOTIFICATION(id));
+};
+
+export const deleteAllNotificationsApi = async (): Promise<void> => {
+  await axiosInstance.delete(NOTIFICATION_ENDPOINTS.DELETE_ALL_NOTIFICATIONS);
+};
+
+export const deleteAllAlertsApi = async (): Promise<void> => {
+  await axiosInstance.delete(NOTIFICATION_ENDPOINTS.DELETE_ALL_ALERTS);
+};

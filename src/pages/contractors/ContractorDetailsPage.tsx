@@ -36,10 +36,12 @@ import TruckDetailsTab from "../../components/contractor/TruckDetailsTab";
 import TicketsTab from "../../components/contractor/TicketsTab";
 import SettlementStatementTab from "../../components/contractor/SettlementStatementTab";
 import ContractorModal from "../../components/contractor/ContractorModal";
+import LoadUpdateSuccessModal from "../../components/common/modal/LoadUpdateSuccessModal";
 import {
   getContractorByIdApi,
   deactivateContractorApi,
   reactivateContractorApi,
+  deleteContractorApi,
 } from "../../services/auth.service";
 import type { ContractorDetail } from "../../types/auth.types";
 
@@ -112,6 +114,10 @@ const ContractorDetailsPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successTitle, setSuccessTitle] = useState(
+    "You have successfully updated the contractor.",
+  );
 
   const handleToggleStatus = async () => {
     if (!id) return;
@@ -185,6 +191,29 @@ const ContractorDetailsPage = () => {
   const [showAddJobModal, setShowAddJobModal] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [showConfirmTooltip, setShowConfirmTooltip] = useState(false);
+
+  const handleEditSuccess = () => {
+    setSuccessTitle("You have successfully updated the contractor.");
+    setShowSuccessModal(true);
+    fetchContractor();
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+
+    try {
+      await deleteContractorApi(id);
+      setSuccessTitle("You have successfully deleted the contractor.");
+      setShowSuccessModal(true);
+      setTimeout(() => navigate("/contractors"), 1200);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Unable to delete contractor.");
+      } else {
+        setError("Unable to delete contractor.");
+      }
+    }
+  };
 
   const [openCallModal, setOpenCallModal] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -354,7 +383,10 @@ const ContractorDetailsPage = () => {
           >
             <SquarePen size={18} />
           </button>
-          <button className="flex items-center text-[#6B7280] justify-center hover:text-red-600 rounded transition-colors shrink-0 cursor-pointer">
+          <button
+            className="flex items-center text-[#6B7280] justify-center hover:text-red-600 rounded transition-colors shrink-0 cursor-pointer"
+            onClick={handleDelete}
+          >
             <Trash size={18} />
           </button>
         </div>
@@ -591,7 +623,13 @@ const ContractorDetailsPage = () => {
         onClose={() => setOpenEditContractorModal(false)}
         isEdit
         editData={contractor}
-        onSuccess={fetchContractor}
+        onSuccess={handleEditSuccess}
+      />
+
+      <LoadUpdateSuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title={successTitle}
       />
 
       {openCallModal && (

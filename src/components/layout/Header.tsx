@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import Bell from "../../assets/icons/NotificationBell.svg";
 import NotificationDrawer from "./NotificationDrawer";
 import { useAuth, getInitials } from "../../hooks/useAuth";
+import { useNotification } from "../../hooks/NotificationContext";
 
 interface HeaderProps {
   setIsMobileOpen?: (open: boolean) => void;
@@ -13,10 +14,14 @@ const Header = ({ setIsMobileOpen }: HeaderProps) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { unread } = useNotification();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
@@ -64,19 +69,26 @@ const Header = ({ setIsMobileOpen }: HeaderProps) => {
         </div>
       </div>
 
-      {/* Right side: Actions & Profile */}
       <div className="flex items-center gap-4 lg:gap-8">
-        {/* Icons */}
         <div className="flex items-center gap-3 lg:gap-5">
-          <button onClick={() => setNotifOpen((v) => !v)} className="text-black hover:text-gray-800 transition-colors cursor-pointer sm:-ml-2">
-            <img src={Bell} alt="Bell" className="size-8 lg:size-10" />
-          </button>
+         <button
+  onClick={() => setNotifOpen((v) => !v)}
+  className="relative text-black hover:text-gray-800 transition-colors cursor-pointer sm:-ml-2"
+>
+  <img src={Bell} alt="Bell" className="size-8 lg:size-10" />
+
+  {unread > 0 && (
+    <span className="absolute top-0 left-5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center leading-none">
+      {unread > 99 ? "99+" : unread}
+    </span>
+  )}
+</button>
         </div>
 
         <NotificationDrawer
-              open={notifOpen}
-              onClose={() => setNotifOpen(false)}
-            />
+          open={notifOpen}
+          onClose={() => setNotifOpen(false)}
+        />
 
         {/* User Profile */}
         <div

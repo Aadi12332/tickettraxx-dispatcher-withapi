@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { Calendar1 } from "lucide-react";
 import dayjs from "dayjs";
 import SectionTitle from "../common/SectionTitle";
 import CalendarModal from "../common/modal/CalendorModal";
 import CommonFilterDropdown from "../common/CommonFilterDropdown";
-import CommonButton from "../common/CommonButton";
 import { getCustomersApi } from "../../services/auth.service";
 import type { ShipmentByCustomer } from "../../types/auth.types";
 
@@ -18,7 +16,7 @@ export default function ShipmentOverview({
   loading = false,
 }: ShipmentOverviewProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
 
   // Customer filter dropdown ab real customers API se aata hai (pehle static poCustomerOptions tha)
   const [customerOptions, setCustomerOptions] = useState<
@@ -66,7 +64,7 @@ export default function ShipmentOverview({
           />
 
           {/* Note: dashboard API abhi date-range filter accept nahi karti, isliye ye sirf date label dikhata hai */}
-          <CommonButton
+          {/* <CommonButton
             onClick={() => setIsCalendarOpen(true)}
             variant="secondary"
             size="md"
@@ -75,7 +73,7 @@ export default function ShipmentOverview({
             <span className="text-xs font-normal">
               {dayjs(selectedDate).format("DD MMM YYYY")}
             </span>
-          </CommonButton>
+          </CommonButton> */}
         </div>
       </div>
 

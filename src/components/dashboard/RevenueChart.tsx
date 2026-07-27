@@ -17,43 +17,66 @@ interface RevenueChartProps {
 }
 
 const monthNames = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
-// "2026-01" -> "Jan"
-const formatMonthLabel = (month: string) => {
-  const [, m] = month.split("-");
-  const idx = Number(m) - 1;
-  return monthNames[idx] ?? month;
-};
-
-export default function RevenueChart({ revenueSummary, loading = false }: RevenueChartProps) {
+export default function RevenueChart({
+  revenueSummary,
+  loading = false,
+}: RevenueChartProps) {
   const [period, setPeriod] = useState("ytd");
+  console.log("Period:", period);
 
   const monthlySeries = revenueSummary?.monthlySeries ?? [];
 
   // API ke monthlySeries me jo bhi years mile hain unhi se dropdown banate hain
   // (koi hardcoded/fake year list nahi — jitna data hai utna hi dikhta hai)
   const years = useMemo(() => {
-    const uniqueYears = Array.from(
-      new Set(monthlySeries.map((item) => item.month.split("-")[0]))
-    ).sort((a, b) => Number(b) - Number(a));
-    return uniqueYears;
+    const uniqueYears = [
+      ...new Set(monthlySeries.map((item) => item.month.split("-")[0])),
+    ].sort((a, b) => Number(b) - Number(a));
+
+    return uniqueYears.length
+      ? uniqueYears
+      : [String(new Date().getFullYear())];
   }, [monthlySeries]);
 
-  const [selectedYear, setSelectedYear] = useState<string>("");
-  const activeYear = selectedYear || years[0] || "";
+  const [selectedYear, setSelectedYear] = useState("");
 
-  const yearFiltered = monthlySeries.filter((item) => item.month.startsWith(activeYear));
+  const activeYear = selectedYear || years[0];
 
   // Note: backend abhi sirf ek "period" (ytd) return karti hai — jab "Last 12 months" ke liye
   // alag data API se aane lage to yahan sirf ek line change karni hogi (period ke hisaab se
   // alag series select kar lena). Tab tak dono toggle same saal ka data dikhate hain.
-  const chartData = yearFiltered.map((item) => ({
-    month: formatMonthLabel(item.month),
-    revenue: item.revenue,
-  }));
+  const chartData = useMemo(() => {
+    const data = monthNames.map((label, index) => {
+      const month = `${activeYear}-${String(index + 1).padStart(2, "0")}`;
+
+      const apiData = monthlySeries.find((m) => m.month === month);
+
+      return {
+        month: label,
+        revenue: apiData?.revenue ?? 0,
+      };
+    });
+
+    if (period === "12months") {
+      return [...data].reverse();
+    }
+
+    return data;
+  }, [monthlySeries, activeYear, period]);
 
   const total = revenueSummary?.total ?? 0;
   const yoy = revenueSummary?.yoyPercent;
@@ -65,7 +88,10 @@ export default function RevenueChart({ revenueSummary, loading = false }: Revenu
         <div className="flex items-center gap-2 sm:ml-auto">
           <ToggleButtonGroup
             value={period}
-            onChange={setPeriod}
+            onChange={(value) => {
+              console.log("Clicked:", value);
+              setPeriod(value);
+            }}
             options={[
               {
                 label: "Year to date",
@@ -100,8 +126,11 @@ export default function RevenueChart({ revenueSummary, loading = false }: Revenu
         <p className="font-medium text-xs font-archivo">
           {yoy !== null && yoy !== undefined ? (
             <>
-              <span className={`font-medium text-xs ${yoy >= 0 ? "text-green" : "text-red-500"}`}>
-                {yoy >= 0 ? "+" : ""}{yoy}%
+              <span
+                className={`font-medium text-xs ${yoy >= 0 ? "text-green" : "text-red-500"}`}
+              >
+                {yoy >= 0 ? "+" : ""}
+                {yoy}%
               </span>
               <span className="text-(--color-gray-text)! font-normal ml-1">
                 increased from last year
@@ -145,13 +174,19 @@ export default function RevenueChart({ revenueSummary, loading = false }: Revenu
                 </linearGradient>
               </defs>
 
-              <XAxis dataKey="month" axisLine={false} tickLine={false} className="text-xs" style={{fontSize:'12px'}} />
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                className="text-xs"
+                style={{ fontSize: "12px" }}
+              />
 
               <YAxis
                 tickFormatter={(value) => `${value / 1000}K`}
                 axisLine={false}
                 tickLine={false}
-                style={{fontSize:'12px'}}
+                style={{ fontSize: "12px" }}
               />
 
               <Tooltip />

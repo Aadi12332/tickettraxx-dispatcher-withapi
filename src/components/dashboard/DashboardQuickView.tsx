@@ -72,11 +72,11 @@ const DashboardQuickView = ({
   // Note: API driverPerformance me rating field nahi aati — rating column/sort hata diya hai
   const sortedDrivers = [...driverPerformance].sort((a, b) => {
     if (completionSort === "low_to_high") {
-      return a.onTimePct - b.onTimePct;
+      return a.completedTrips - b.completedTrips;
     }
 
     if (completionSort === "high_to_low") {
-      return b.onTimePct - a.onTimePct;
+      return b.completedTrips - a.completedTrips;
     }
 
     return 0;
@@ -99,8 +99,8 @@ const DashboardQuickView = ({
             icon={!completionSort ? <SlidersHorizontal size={18} /> : null}
             options={[
               { label: "Default", value: "" },
-              { label: "Low to High Completion %", value: "low_to_high" },
-              { label: "High to Low Completion %", value: "high_to_low" },
+              { label: "Low to High Completion", value: "low_to_high" },
+              { label: "High to Low Completion", value: "high_to_low" },
             ]}
             size="auto"
           />

@@ -20,6 +20,9 @@ export const NOTIFICATION_ENDPOINTS = {
   ALERTS: "/alerts",
   MARK_READ: (id: string) => `/notifications/${id}/read`,
   MARK_ALL_READ: "/notifications/read-all",
+  DELETE_NOTIFICATION: (id: string) => `/notifications/${id}`,
+  DELETE_ALL_NOTIFICATIONS: "/notifications",
+  DELETE_ALL_ALERTS: "/alerts",
 } as const;
 
 export const MATERIAL_ENDPOINTS = {

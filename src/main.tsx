@@ -6,10 +6,12 @@ import { store } from "./store";
 import { router } from "./routes";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
+import { NotificationProvider } from "./hooks/NotificationContext";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-    <Provider store={store}>
+  <Provider store={store}>
+    <NotificationProvider>
       <RouterProvider router={router} />
-    </Provider>
+    </NotificationProvider>
+  </Provider>,
 );
-
