@@ -28,7 +28,7 @@ const TableFilters = ({
   isSettingFilter = false,
 }: TableFiltersProps) => {
   return (
-    <div className="p-3 lg:p-4 border-b border-(--border-gray-2) bg-white">
+    <div className="mb-5">
       <div className="flex flex-wrap lg:gap-4 gap-2 lg:items-center justify-between">
         <div
           className={`flex flex-wrap lg:gap-4 gap-2 ${entries !== undefined ? "w-[unset]" : "w-full"}`}
@@ -48,9 +48,9 @@ const TableFilters = ({
           )}
 
           {/* Search */}
-          <div className="relative md:w-[200px] w-[130px] xl:w-[330px]">
+          <div className="relative md:w-[200px] w-[130px] xl:w-[330px] bg-white border border-(--border-gray-2) rounded-[4px]">
             <Search
-              size={18}
+              size={16}
               className="absolute left-3 top-2.5 text-text-gray"
             />
 
@@ -58,7 +58,7 @@ const TableFilters = ({
               value={searchValue}
               onChange={(e) => onSearchChange?.(e.target.value)}
               placeholder="Search"
-              className="h-[36px] w-full border border-(--border-gray-2) rounded-[4px] pl-11 pr-4 outline-none"
+              className="h-[32px] w-full pl-11 pr-4 outline-none"
             />
           </div>
 

@@ -69,6 +69,53 @@ export interface ApiError {
   status?: number;
 }
 
+export interface DispatchBoardColumn {
+  column: number;
+  loadId: string;
+  jobId: string;
+  jobCode: string;
+  customer: string;
+  material: string;
+  pickup: string;
+  delivery: string;
+  numberOfLoads: number;
+  invoiceRate: number;
+  contractorRate: number;
+  amountInvoice: number;
+  amountContractor: number;
+}
+
+export interface DispatchBoardItem {
+  id: string;
+  dispatchNo?: string;
+  date: string;
+  status: string;
+  customer: string | null;
+  jobCode: string | null;
+  material: string | null;
+  pickup: string | null;
+  delivery: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  comment: string | null;
+  totalLoads: number;
+  invoiceTotal: number;
+  contractorTotal: number;
+  columns: DispatchBoardColumn[];
+}
+
+export interface DispatchBoardPagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export interface DispatchBoardResponse {
+  data: DispatchBoardItem[];
+  pagination: DispatchBoardPagination;
+}
+
 export interface NotificationItem {
   _id: string;
   userId: string;

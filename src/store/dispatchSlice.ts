@@ -16,6 +16,8 @@ export interface DispatchEntry {
   driverName: string; // card header label
   delivery: string;
   location?: string;
+    jobId?: string;
+  contractorRate?:number;
   loads: number;
   rate: number;
   pickup: string;
@@ -28,6 +30,8 @@ export interface DispatchEntry {
 export interface AssignLoadCardData {
   driverName: string;
   delivery: string;
+  jobId?: string;
+  contractorRate?:number;
   loads: number;
   rate: number;
   pickup: string;
@@ -660,6 +664,8 @@ export const selectLoadCards = createSelector(
         driverName,
         delivery,
         loads,
+        jobId,
+        contractorRate,
         rate,
         pickup,
         material,
@@ -669,6 +675,8 @@ export const selectLoadCards = createSelector(
         driverName,
         delivery,
         loads,
+        jobId,
+        contractorRate,
         rate,
         pickup,
         material,

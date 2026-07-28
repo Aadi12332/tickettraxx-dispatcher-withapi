@@ -62,18 +62,14 @@ const JobCell = (
     }
   }
 
-  // Poora cell tabhi clickable hoga jab job cancelled ho
   const canClickToCancel = !isSummaryRow && isCancelled;
 
   const handleCellClick = () => {
     if (!canClickToCancel) return;
-    if (isButtonEnabled) return; // pehle wali gating (edit-mode) same rakhi
+    if (isButtonEnabled) return;
     params.context.openCancelDrawer();
   };
 
-  // Color priority: cancelled (red) > loadCompleted-based scale (only when
-  // loads > 1) > changed (blue) > default. Total `value`/`loads` count no
-  // longer drives color — only `loadCompleted` does, and only if loads > 1.
   const numericValue = Number(value);
   const loadCompleted = currentJob?.loadCompleted;
 
@@ -82,7 +78,7 @@ const JobCell = (
       ? LOAD_COLOR_MAP[Number(loadCompleted)]
       : undefined;
 
-  let textColor = "#364153"; // default
+  let textColor = "#364153";
   let isBold = false;
 
   if (isCancelled) {
@@ -188,39 +184,39 @@ const DispatchAssignmentGrid = ({
   matrixData,
   enableColumnResize = true,
 }: any) => {
-  console.log(footer)
   // const jobHeaders = useAppSelector(selectJobHeaders);
   const [driverPopup, setDriverPopup] = useState<any>(null);
 
-  const pinnedBottomRowData = useMemo(() => {
-    if (!jobHeaders) return [];
-    const totalJobs = jobHeaders?.map((job: string, index: number) => ({
-      id: job,
-      loads: matrixData?.columns?.[index]?.totalAssigned ?? 0,
-    }));
+const pinnedBottomRowData = useMemo(() => {
+  if (!jobHeaders) return [];
 
-    const remainingJobs = jobHeaders?.map((job: string, index: number) => ({
-      id: job,
-      loads: matrixData?.columns?.[index]?.remaining ?? 0,
-    }));
+  const totalJobs = jobHeaders.map((job: string, index: number) => ({
+    id: job,
+    loads: matrixData?.columns?.[index]?.totalAssigned ?? 0,
+  }));
 
-    return [
-      {
-        truckId: "Total",
-        rowType: "total",
-        jobs: totalJobs,
-        tonnage: footer?.grandTonnage,
-        total: footer?.grandTotal,
-      },
-      {
-        truckId: "Remaining",
-        rowType: "remaining",
-        jobs: remainingJobs,
-        tonnage: 0,
-        total: 0,
-      },
-    ];
-  }, [footer, jobHeaders, matrixData]);
+  const remainingJobs = jobHeaders.map((job: string, index: number) => ({
+    id: job,
+    loads: matrixData?.columns?.[index]?.remaining ?? 0,
+  }));
+
+  return [
+    {
+      truckId: "Total",
+      rowType: "total",
+      jobs: totalJobs,
+      tonnage: footer?.grandTonnage ?? 0,
+      total: footer?.grandTotal ?? 0,
+    },
+    {
+      truckId: "Remaining",
+      rowType: "remaining",
+      jobs: remainingJobs,
+      tonnage: footer?.grandRemaining ?? 0,
+      total: footer?.grandRemainingTotal ?? 0,
+    },
+  ];
+}, [footer, jobHeaders, matrixData]);
   const defaultColDef = useMemo(
     () => ({
       cellStyle: (params: any) => {
@@ -556,34 +552,31 @@ const DispatchAssignmentGrid = ({
       }),
 
       {
-        field: "tonnage",
-        headerName: "Tonnage",
-        minWidth: 85,
-        flex: 1,
-        // wrapText: true,
-        editable: enableColumnResize,
-        resizable: true,
-        // pinned:"right"
-      },
+  field: "tonnage",
+  headerName: "Tonnage",
+  minWidth: 85,
+  flex: 1,
+  valueFormatter: (params) =>
+    params.value != null ? `$${params.value}` : "",
+},
 
       {
-        field: "total",
-        headerName: "Total",
-        flex: 1,
-        minWidth: 80,
-        // wrapText: true,
-        editable: enableColumnResize,
-        // pinned: "right",
-        colSpan: (params) => {
-          if (
-            params.data?.rowType === "total" ||
-            params.data?.rowType === "remaining"
-          ) {
-            return 4;
-          }
-          return 1;
-        },
-      },
+  field: "total",
+  headerName: "Total",
+  flex: 1,
+  minWidth: 80,
+  valueFormatter: (params) =>
+    params.value != null ? `$${params.value}` : "",
+  colSpan: (params) => {
+    if (
+      params.data?.rowType === "total" ||
+      params.data?.rowType === "remaining"
+    ) {
+      return 4;
+    }
+    return 1;
+  },
+},
 
       // {
       //   field: "weCall",

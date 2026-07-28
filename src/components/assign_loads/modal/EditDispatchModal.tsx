@@ -2,7 +2,7 @@ import { Modal } from "@mui/material";
 import { X, Plus, Minus } from "lucide-react";
 import CommonTextInput from "../../common/CommonTextInput";
 import CommonSelectInput from "../../common/CommonSelectInput";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CreatePickupModal from "../../pickup/modal/CreatePickupModal";
 import {
@@ -70,12 +70,14 @@ const EditDispatchModal = ({
   const [formData, setFormData] = useState(initialFormData);
   const [openPickupModal, setOpenPickupModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
+const loadsRef = useRef<HTMLInputElement>(null);
   // Dispatch that gets created the moment a date is picked
   const [dispatchId, setDispatchId] = useState<string | null>(null);
   const [creatingDispatch, setCreatingDispatch] = useState(false);
   const [dispatchError, setDispatchError] = useState("");
-
+  const [errors, setErrors] = useState({
+    loads: false,
+  });
   const [jobs, setJobs] = useState<Job[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [siteMap, setSiteMap] = useState<Record<string, string>>({});
@@ -204,6 +206,12 @@ const EditDispatchModal = ({
   };
 
   const handleChange = (field: keyof typeof formData) => (value: string) => {
+    if (field === "loads") {
+      setErrors((prev) => ({
+        ...prev,
+        loads: false,
+      }));
+    }
     if (field === "poCode") {
       const job = jobs.find((j) => j._id === value);
 
@@ -212,10 +220,10 @@ const EditDispatchModal = ({
           ...prev,
           poCode: value,
           customer: resolveId(job.customerId),
-         material:
-  typeof job.materialId === "object" && job.materialId
-    ? job.materialId._id
-    : "",
+          material:
+            typeof job.materialId === "object" && job.materialId
+              ? job.materialId._id
+              : "",
           pickup: resolveId(job.pickupSiteId),
           deliver: resolveId(job.deliverySiteId),
           invoiceRate: String(job.rate ?? ""),
@@ -232,25 +240,25 @@ const EditDispatchModal = ({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-const materialOptionsForSelectedJob = useMemo(() => {
-  const job = jobs.find((j) => j._id === formData.poCode);
+  const materialOptionsForSelectedJob = useMemo(() => {
+    const job = jobs.find((j) => j._id === formData.poCode);
 
-  // PO me material assigned hai
-  if (job && typeof job.materialId === "object" && job.materialId) {
-    return [
-      {
-        label: job.materialId.name,
-        value: job.materialId._id,
-      },
-    ];
-  }
+    // PO me material assigned hai
+    if (job && typeof job.materialId === "object" && job.materialId) {
+      return [
+        {
+          label: job.materialId.name,
+          value: job.materialId._id,
+        },
+      ];
+    }
 
-  // PO me material nahi hai
-  return materials.map((material) => ({
-    label: material.name,
-    value: material._id,
-  }));
-}, [jobs, materials, formData.poCode]);
+    // PO me material nahi hai
+    return materials.map((material) => ({
+      label: material.name,
+      value: material._id,
+    }));
+  }, [jobs, materials, formData.poCode]);
 
   const pickupOptions = useMemo(
     () => Object.entries(siteMap).map(([value, label]) => ({ label, value })),
@@ -258,6 +266,27 @@ const materialOptionsForSelectedJob = useMemo(() => {
   );
 
   const handleSubmit = async () => {
+    const loads = Number(formData.loads);
+
+if (!formData.loads || loads <= 0) {
+  setErrors({ loads: true });
+
+  setTimeout(() => {
+    loadsRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    loadsRef.current?.focus();
+  }, 0);
+
+  return;
+}
+
+    setErrors({
+      loads: false,
+    });
+
     if (!isFormValid || submitting) return;
 
     if (!dispatchId) {
@@ -319,6 +348,11 @@ const materialOptionsForSelectedJob = useMemo(() => {
 
   const disableActions = (!isEdit && !isFormValid) || submitting;
 
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const tomorrowDate = tomorrow.toISOString().split("T")[0];
+
   return (
     <Modal open={open} onClose={handleClose}>
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[9999]">
@@ -350,6 +384,8 @@ const materialOptionsForSelectedJob = useMemo(() => {
                 value={formData.dispatchDate}
                 onChange={handleDispatchDateChange}
                 type="date"
+                min={tomorrowDate}
+                max={tomorrowDate}
               />
               {creatingDispatch && (
                 <p className="text-xs text-[#717182] mt-1">
@@ -368,17 +404,17 @@ const materialOptionsForSelectedJob = useMemo(() => {
                 </h3>
                 <div className="sm:grid-cols-2 grid-cols-1 mt-6 flex sm:grid flex-col gap-4">
                   <CommonSelectInput
-                    label="Job ID# / PO Code"
-                    value={formData.poCode}
-                    onChange={handleChange("poCode")}
-                    options={jobOptions}
-                    disabled={optionsLoading}
-                  />
-                  <CommonSelectInput
                     label="Customer"
                     value={formData.customer}
                     onChange={handleChange("customer")}
                     options={customerOptions}
+                    disabled={optionsLoading}
+                  />
+                  <CommonSelectInput
+                    label="Job ID# / PO Code"
+                    value={formData.poCode}
+                    onChange={handleChange("poCode")}
+                    options={jobOptions}
                     disabled={optionsLoading}
                   />
 
@@ -390,10 +426,12 @@ const materialOptionsForSelectedJob = useMemo(() => {
                   />
 
                   <CommonTextInput
+                  ref={loadsRef}
                     label="Number of Loads"
                     value={formData.loads}
                     onChange={handleChange("loads")}
                     placeholder="Enter"
+                    error={errors.loads}
                   />
 
                   <CommonTextInput

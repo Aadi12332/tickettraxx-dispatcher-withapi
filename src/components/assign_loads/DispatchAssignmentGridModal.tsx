@@ -1,6 +1,8 @@
 import { Modal } from "@mui/material";
 import collapsed from "../../assets/icons/collapsed.svg";
 import DispatchAssignmentGrid from "./DispatchAssignmentGrid";
+// import { useEffect, useState } from "react";
+import { useAssignLoad } from "../../pages/assign_loads/AssignLoadContext";
 
 interface Props {
   open: boolean;
@@ -33,6 +35,7 @@ const DispatchAssignmentGridModal = ({
   footer,
   matrixData,
 }: Props) => {
+  const { selectedDate } = useAssignLoad();
   return (
     <Modal open={open} onClose={onClose}>
       <div className="fixed inset-0 bg-[#F4F5F8] flex items-start justify-center z-50">
@@ -40,7 +43,7 @@ const DispatchAssignmentGridModal = ({
           {/* Header */}
           <div className="bg-white border-b border-gray-200 h-[45px] px-6 flex items-center justify-between shrink-0">
             <h2 className="text-lg font-semibold">
-              Dispatch Details for {selectedDay || "2024-06-03"}
+              Dispatch Details for {selectedDate || ""}
             </h2>
 
             <button

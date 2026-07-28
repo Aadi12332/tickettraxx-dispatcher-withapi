@@ -60,6 +60,7 @@ import type {
   AssignmentListResponse,
   CreateDispatchPayload,
   DispatchResponse,
+  DispatchBoardResponse,
 } from "../types/auth.types";
 
 // ---------- Auth ----------
@@ -508,4 +509,15 @@ export const deleteAllNotificationsApi = async (): Promise<void> => {
 
 export const deleteAllAlertsApi = async (): Promise<void> => {
   await axiosInstance.delete(NOTIFICATION_ENDPOINTS.DELETE_ALL_ALERTS);
+};
+
+export const getDispatchBoardApi = async (
+  page = 1,
+  limit = 20,
+): Promise<DispatchBoardResponse> => {
+  const { data } = await axiosInstance.get<DispatchBoardResponse>(
+    DISPATCH_ENDPOINTS.GET_DISPATCH_BOARD,
+    { params: { page, limit } },
+  );
+  return data;
 };

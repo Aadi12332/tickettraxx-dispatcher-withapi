@@ -32,6 +32,7 @@ export const MATERIAL_ENDPOINTS = {
 
 export const DISPATCH_ENDPOINTS = {
   GET_DISPATCHES: "/dispatches",
+  GET_DISPATCH_BOARD: "/dispatches/board",
   CREATE_DISPATCH: "/dispatches",
   EXPORT_DISPATCH: (id: string) => `/dispatches/${id}/export`,
 } as const;

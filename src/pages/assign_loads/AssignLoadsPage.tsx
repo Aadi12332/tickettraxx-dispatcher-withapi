@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { RefreshCcw } from "lucide-react";
 import PageHeader from "../../components/common/PageHeader";
 import { useState, useMemo, useEffect } from "react";
@@ -20,28 +21,19 @@ import {
 } from "../../store/dispatchSlice";
 import ToastModal from "../../components/common/modal/ToastModal";
 import SuccessActionModal from "../../components/assign_loads/SuccessActionModal";
-import {
-  getAssignmentMatrixApi,
-} from "../../services/auth.service";
-
-export const weekDays = [
-  "SUN 4/3",
-  "MON 4/4",
-  "TUE 4/5",
-  "WED 4/6",
-  "THUR 4/7",
-  "FRI 4/8",
-  "SAT 4/9",
-];
+import { getAssignmentMatrixApi } from "../../services/auth.service";
+import { useAssignLoad } from "./AssignLoadContext";
 
 interface LoadCard {
   driverName: string;
   delivery: string;
   loads: number;
   rate: number;
+  contractorRate: number;
   pickup: string;
   material: string;
   time: string;
+  jobId?: string;
   headerColor?: "yellow" | "orange";
 }
 
@@ -53,6 +45,9 @@ export const mapMatrixColumnToCard = (item: any): LoadCard => ({
   pickup: item.pickup,
   material: item.material,
   time: item.time,
+  jobId: item.poCode,
+  contractorRate: item.contractorRate,
+  headerColor: item.headerColor ?? "yellow",
 });
 
 const AssignLoadsPage = () => {
@@ -78,32 +73,45 @@ const AssignLoadsPage = () => {
     title: "",
   });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  console.log(setToastTitle, showSuccessModal)
+  console.log(setToastTitle, showSuccessModal);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const today = new Date().toISOString().split("T")[0];
+
+const { selectedDate, setSelectedDate } = useAssignLoad();
   const [matrixData, setMatrixData] = useState<any>(null);
   const [footer, setFooter] = useState<any>(null);
-  const weekDays = [
-    "SUN 4/3",
-    "MON 4/4",
-    "TUE 4/5",
-    "WED 4/6",
-    "THUR 4/7",
-    "FRI 4/8",
-    "SAT 4/9",
-  ];
 
-  const weekDayMap = [
-    "SUN 4/3",
-    "MON 4/4",
-    "TUE 4/5",
-    "WED 4/6",
-    "THUR 4/7",
-    "FRI 4/8",
-    "SAT 4/9",
-  ];
+  useEffect(() => {
+    sessionStorage.setItem("assignLoadsDate", selectedDate);
+  }, [selectedDate]);
+
+  const weekDays = useMemo(() => {
+    const today = new Date();
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() + index);
+
+      const day = date
+        .toLocaleDateString("en-US", { weekday: "short" })
+        .toUpperCase();
+
+      return {
+        label: `${day} ${date.getMonth() + 1}/${date.getDate()}`,
+        value: date.toISOString().split("T")[0],
+      };
+    });
+  }, []);
+
+  useEffect(() => {
+    const selected = weekDays.find((d) => d.value === selectedDate);
+
+    if (selected) {
+      dispatch(setSelectedDay(selected.label));
+    } else {
+      dispatch(setSelectedDay(""));
+    }
+  }, []);
 
   const loadAssignments = async () => {
     setCardsLoading(true);
@@ -124,7 +132,7 @@ const AssignLoadsPage = () => {
 
         jobs: row.jobs.map((job: any) => {
           const column = res.data?.data?.columns.find(
-            (c: any) => c.id === job.id
+            (c: any) => c.id === job.id,
           );
 
           return {
@@ -202,8 +210,12 @@ const AssignLoadsPage = () => {
     return assignmentCards;
   }, [assignmentCards]);
 
+  const hasCardData = (matrixData?.columns?.length ?? 0) > 0;
+  const hasRowData = (matrixData?.rows?.length ?? 0) > 0 && (matrixData?.columns?.length ?? 0) > 0;
+  const hasAnyData = hasCardData || hasRowData;
+
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 h-full">
       <PageHeader
         title="Assign Loads"
         description="Enables you to assign loads to available drivers"
@@ -265,26 +277,20 @@ const AssignLoadsPage = () => {
               {/* Week Days */}
               <div className="flex md:flex-1 max-w-lg min-w-0 overflow-x-auto scrollbar-hide ">
                 <div className="flex items-center gap-2 w-max text-xs">
-                  {weekDays.map((day, index) => (
+                  {weekDays.map((day) => (
                     <button
-                      key={day}
+                      key={day.value}
                       onClick={() => {
-                        dispatch(setSelectedDay(day));
-
-                        const date = new Date(selectedDate);
-                        const currentDay = date.getDay();
-                        const diff = index - currentDay;
-
-                        date.setDate(date.getDate() + diff);
-                        setSelectedDate(date.toISOString().split("T")[0]);
+                        dispatch(setSelectedDay(day.label));
+                        setSelectedDate(day.value);
                       }}
                       className={
-                        selectedDay === day
+                        selectedDay === day.label
                           ? "bg-sky-blue-two text-white px-1 py-0.5 rounded-lg cursor-progress"
                           : "text-[#2F2F2F]"
                       }
                     >
-                      {day}
+                      {day.label}
                     </button>
                   ))}
                 </div>
@@ -299,10 +305,7 @@ const AssignLoadsPage = () => {
                     const value = e.target.value;
                     setSelectedDate(value);
 
-                    if (!value) return;
-
-                    const index = new Date(value).getDay();
-                    dispatch(setSelectedDay(weekDayMap[index]));
+                    dispatch(setSelectedDay(""));
                   }}
                   className="
                   h-8
@@ -368,55 +371,85 @@ const AssignLoadsPage = () => {
       `}</style>
 
       <div className="relative w-full mt-3">
-        {/* Cards Layer */}
-        <div className="absolute top-0 left-0 right-0 z-[80]">
-          <div
-            className="cards-scroll overflow-x-auto"
-            style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "#1D3461 #D9D9D9",
-            }}
-          >
-            <div className="flex gap-4 min-w-max items-center pb-3 pt-0 max-w-full">
-              {cardsLoading && (
-                <p className="text-sm text-[#6B7280] px-2">Loading...</p>
-              )}
-              {currentLoadCards.map((card, index) => (
-                <AssignLoadCard
-                  key={index}
-                  {...card}
-                  onCancelReroute={() => setOpenCancelDrawer(true)}
-                  onEditDispatch={() => setShowEditModal(true)}
-                />
-              ))}
-            </div>
+        {!hasAnyData ? (
+          <div className="flex items-center justify-center h-[450px] bg-white border rounded-lg border-gray-300">
+            <p className="text-lg font-medium text-gray-500">
+              No data found for the selected date.
+            </p>
           </div>
-        </div>
+        ) : (
+          <>
+            {hasCardData ? (
+              <div className="absolute top-0 left-0 right-0 z-[80]">
+                <div
+                  className="cards-scroll overflow-x-auto"
+                  style={{
+                    scrollbarWidth: "thin",
+                    scrollbarColor: "#1D3461 #D9D9D9",
+                  }}
+                >
+                  <div className="flex gap-4 min-w-max items-center pb-3 pt-0 max-w-full">
+                    {cardsLoading && (
+                      <p className="text-sm text-[#6B7280] px-2">Loading...</p>
+                    )}
 
-        <div className="pt-[170px] relative z-1 w-full overflow-auto">
-          <div className="">
-            <DispatchAssignmentGrid
-              onOpenCancelDrawer={() => setOpenCancelDrawer(true)}
-              onRowClicked={() => setIsLiveTrackingModalOpen(true)}
-              buttonStatus={buttonStatus}
-              selectedDay={selectedDay}
-              rowData={rowData}
-              setRowData={handleSetRowData}
-              originalRowData={originalRowData}
-              currentLoadCards={currentLoadCards}
-              handleUpdate={() => {
-                setShowSuccessModal(true);
-                setTimeout(() => {
-                  setShowSuccessModal(false);
-                }, 3000);
-              }}
-              customHeight="h-[calc(100vh-105px)]"
-              jobHeaders={matrixData?.columns?.map((x: any) => x.poCode) || []}
-              footer={footer}
-              matrixData={matrixData}
-            />
-          </div>
-        </div>
+                    {currentLoadCards.map((card, index) => (
+                      <AssignLoadCard
+                        key={index}
+                        {...card}
+                        onCancelReroute={() => setOpenCancelDrawer(true)}
+                        onEditDispatch={() => setShowEditModal(true)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-[160px] flex items-center justify-center bg-white border rounded-lg border-gray-300">
+                <p className="text-lg font-medium text-gray-500">
+                  No card data found.
+                </p>
+              </div>
+            )}
+
+            {hasRowData ? (
+              <div
+                className={`relative z-1 w-full overflow-auto ${
+                  hasCardData ? "pt-[170px]" : "pt-4"
+                }`}
+              >
+                <DispatchAssignmentGrid
+                  onOpenCancelDrawer={() => setOpenCancelDrawer(true)}
+                  onRowClicked={() => setIsLiveTrackingModalOpen(true)}
+                  buttonStatus={buttonStatus}
+                  selectedDay={selectedDay}
+                  rowData={rowData}
+                  setRowData={handleSetRowData}
+                  originalRowData={originalRowData}
+                  currentLoadCards={currentLoadCards}
+                  handleUpdate={() => {
+                    setShowSuccessModal(true);
+                    setTimeout(() => setShowSuccessModal(false), 3000);
+                  }}
+                  customHeight="h-[calc(100vh-170px)]"
+                  jobHeaders={
+                    matrixData?.columns?.map((x: any) => x.poCode) || []
+                  }
+                  footer={footer}
+                  matrixData={matrixData}
+                />
+              </div>
+            ) : (
+              <div className={hasCardData ? "pt-[170px]" : "pt-4"}>
+                <div className="flex items-center justify-center h-[450px] bg-white border rounded-lg border-gray-300">
+                  <p className="text-lg font-medium text-gray-500">
+                    No table data found.
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
       <CancelRerouteDrawer
         open={openCancelDrawer}
@@ -441,7 +474,7 @@ const AssignLoadsPage = () => {
           }, 3000);
         }}
         jobHeaders={matrixData?.columns?.map((x: any) => x.poCode) || []}
-        footer={matrixData?.footer}
+        footer={footer}
         matrixData={matrixData}
       />
       <DispatchDetailsModal

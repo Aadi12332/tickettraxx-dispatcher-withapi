@@ -15,12 +15,14 @@ import CommonConfirmModal from "../common/modal/CommonConfirmModal";
 interface AssignLoadCardProps {
   driverName: string;
   delivery: string;
+  jobId: string;
   loads: number;
-  rate: number;
+  rate?: number;
+  contractorRate: number;
   pickup: string;
   material: string;
   time: string;
-  headerColor?: "yellow" | "orange";
+  headerColor: "yellow" | "orange";
   onCancelReroute?: () => void;
   onEditDispatch?: () => void;
   expandOnHover?: boolean;
@@ -30,7 +32,9 @@ const AssignLoadCard = ({
   driverName,
   delivery,
   loads,
-  rate,
+  jobId,
+  // rate,
+  contractorRate,
   pickup,
   material,
   time,
@@ -116,22 +120,26 @@ const AssignLoadCard = ({
       </div>
 
       {/* Delivery */}
-      <div className="mt-1.5 bg-[#90FFC3] rounded-[5px] p-1.5 h-[52px] overflow-y-auto">
-        <p className="text-[#374151] text-xs leading-4">
-          <span className="font-bold">Delivery:</span>
+      <div className={`mt-1.5 bg-[#90FFC3] rounded-[5px] p-1.5  ${(expandOnHover) ? "h-[52px] overflow-auto":""}`}>
+        <p className={`text-[#374151] text-[13px] text-start ${(expandOnHover) ? "truncate":""}`}>
+          <span className="font-bold">Delivery: </span>
           {delivery}
+        </p>
+        <p className="text-[#374151] text-[13px]">
+          <span className="font-bold">Job ID: </span>
+          {jobId}
         </p>
       </div>
 
       {/* Stats */}
       <div className="flex items-center justify-between mt-1">
         <div>
-          <span className="text-[#4A5565] text-sm font-medium">Loads:</span>
-          <span className="ml-2 text-sm font-bold">{loads}</span>
+          <span className="text-[#4A5565] text-[13px] font-medium">Loads:</span>
+          <span className="ml-1 text-[13px] font-bold">{loads}</span>
         </div>
         <div>
-          <span className="text-[#4A5565] text-sm font-medium">Rate:</span>
-          <span className="ml-2 text-sm font-bold">${rate}</span>
+          <span className="text-[#4A5565] text-[13px] font-medium">Rate:</span>
+          <span className="ml-1 text-[13px] font-bold">${contractorRate}</span>
         </div>
       </div>
 
@@ -149,12 +157,12 @@ const AssignLoadCard = ({
         >
           <div className="border-t border-gray-200 pt-1 pb-1">
             <p className="text-[10px] text-black">Pickup</p>
-            <p className="font-semibold text-xs">{pickup}</p>
+            <p className="font-semibold text-xs">{pickup || "N/A"}</p>
           </div>
 
           <div className="border-t border-gray-200 pt-1 pb-1">
             <p className="text-[10px] text-black">Material</p>
-            <p className="font-semibold text-xs">{material}</p>
+            <p className="font-semibold text-xs">{material || "N/A"}</p>
           </div>
 
           <div className="border-t border-gray-200 pt-2 flex items-center gap-2">
