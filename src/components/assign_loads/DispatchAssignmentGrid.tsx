@@ -1,4 +1,11 @@
-import { useMemo, useState, useRef, useEffect, useCallback, type MouseEvent } from "react";
+import {
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  type MouseEvent,
+} from "react";
 import { AgGridProvider, AgGridReact } from "ag-grid-react";
 
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
@@ -108,23 +115,22 @@ const JobCell = (
         {params.value}
       </span>
 
-      {Number(params.value) > 0 && (
-       <div
-  className="flex items-center justify-center gap-1 w-full h-full"
-  onMouseDown={(e) => e.stopPropagation()}
->
-
-  <XCircle
-    size={12}
-    className="cursor-pointer text-red-500"
-    onMouseDown={(e: MouseEvent<SVGSVGElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-      params.context.openCancelDrawer();
-    }}
-  />
-</div>
-      )}
+      {!isSummaryRow && Number(params.value) > 0 && (
+  <div
+    className="flex items-center justify-center"
+    onMouseDown={(e) => e.stopPropagation()}
+  >
+    <XCircle
+      size={12}
+      className="cursor-pointer text-red-500"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        params.context.openCancelDrawer();
+      }}
+    />
+  </div>
+)}
     </div>
   );
 };
