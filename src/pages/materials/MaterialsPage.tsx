@@ -140,7 +140,7 @@ const MaterialsPage = () => {
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 
-      <div className=" bg-white">
+      <div className="p-4 bg-white">
         <TableFilters
           searchValue={search}
           onSearchChange={setSearch}

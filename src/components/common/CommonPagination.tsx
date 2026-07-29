@@ -40,7 +40,7 @@ const CommonPagination = ({
   };
 
   return (
-    <div className={`flex sm:flex-row flex-col gap-2 items-center justify-between md:p-5 p-3 `}>
+    <div className={`flex sm:flex-row flex-col gap-2 items-center justify-between md:pt-5 pt-3 `}>
       {/* Left text */}{" "}
       {isLeftText && (
         <p className="text-[#6B7280] text-xs xl:text-sm font-normal">

@@ -521,3 +521,29 @@ export const getDispatchBoardApi = async (
   );
   return data;
 };
+
+export const createAssignment = async (payload: any) => {
+  try {
+    const { data } = await axiosInstance.post("/assignments", payload);
+    return data;
+  } catch (error) {
+    console.error("Create Assignment Error:", error);
+    throw error;
+  }
+};
+
+export const updateAssignment = async (
+  assignmentId: string,
+  loadsCount: number,
+) => {
+  try {
+    const { data } = await axiosInstance.patch(
+      `/assignments/${assignmentId}`,
+      { loadsCount },
+    );
+    return data;
+  } catch (error) {
+    console.error("Update Assignment Error:", error);
+    throw error;
+  }
+};

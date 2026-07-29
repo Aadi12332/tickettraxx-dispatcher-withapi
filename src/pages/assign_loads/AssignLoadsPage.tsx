@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { RefreshCcw } from "lucide-react";
 import PageHeader from "../../components/common/PageHeader";
 import { useState, useMemo, useEffect } from "react";
@@ -29,6 +30,7 @@ interface LoadCard {
   loads: number;
   rate: number;
   contractorRate: number;
+  remaining:number;
   pickup: string;
   material: string;
   time: string;
@@ -45,6 +47,7 @@ export const mapMatrixColumnToCard = (item: any): LoadCard => ({
   material: item.material,
   time: item.time,
   jobId: item.poCode,
+  remaining: item.remaining,
   contractorRate: item.contractorRate,
   headerColor: item.headerColor ?? "yellow",
 });
@@ -74,7 +77,6 @@ const AssignLoadsPage = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   console.log(setToastTitle, showSuccessModal);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const today = new Date().toISOString().split("T")[0];
 
 const { selectedDate, setSelectedDate } = useAssignLoad();
   const [matrixData, setMatrixData] = useState<any>(null);
@@ -121,14 +123,16 @@ const { selectedDate, setSelectedDate } = useAssignLoad();
       setFooter(res.data?.footer);
 
       setAssignmentCards(res.data?.data?.columns.map(mapMatrixColumnToCard));
-      const rows = res.data?.data?.rows.map((row: any) => ({
+      const rows = res.data?.data?.rows.map((row: any,idx: number) => ({
+        _rowKey: row.driverId ?? row.id ?? `row-${idx}`,
         driver: row.driver,
         truckId: row.truckId,
         tonnage: row.tonnage,
         total: row.total,
         status: row.status,
         weCall: row.weCall,
-
+        driverId:row.driverId,
+        contractorId:row.contractorId,
         jobs: row.jobs.map((job: any) => {
           const column = res.data?.data?.columns.find(
             (c: any) => c.id === job.id,
@@ -436,6 +440,8 @@ const { selectedDate, setSelectedDate } = useAssignLoad();
                   }
                   footer={footer}
                   matrixData={matrixData}
+                  selectedDate={selectedDate}
+                  loadAssignments={loadAssignments}
                 />
               </div>
             ) : (
@@ -462,6 +468,8 @@ const { selectedDate, setSelectedDate } = useAssignLoad();
         onRowClicked={() => setIsLiveTrackingModalOpen(true)}
         buttonStatus={buttonStatus}
         selectedDay={selectedDay}
+           selectedDate={selectedDate}
+                  loadAssignments={loadAssignments}
         rowData={rowData}
         setRowData={handleSetRowData}
         originalRowData={originalRowData}

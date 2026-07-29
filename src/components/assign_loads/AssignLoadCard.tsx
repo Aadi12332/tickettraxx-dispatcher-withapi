@@ -19,6 +19,7 @@ interface AssignLoadCardProps {
   loads: number;
   rate?: number;
   contractorRate: number;
+  remaining: number;
   pickup: string;
   material: string;
   time: string;
@@ -31,9 +32,9 @@ interface AssignLoadCardProps {
 const AssignLoadCard = ({
   driverName,
   delivery,
-  loads,
   jobId,
   // rate,
+  remaining,
   contractorRate,
   pickup,
   material,
@@ -135,7 +136,7 @@ const AssignLoadCard = ({
       <div className="flex items-center justify-between mt-1">
         <div>
           <span className="text-[#4A5565] text-[13px] font-medium">Loads:</span>
-          <span className="ml-1 text-[13px] font-bold">{loads}</span>
+          <span className="ml-1 text-[13px] font-bold">{remaining}</span>
         </div>
         <div>
           <span className="text-[#4A5565] text-[13px] font-medium">Rate:</span>

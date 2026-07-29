@@ -17,6 +17,7 @@ interface Props {
   jobHeaders?: any[];
   footer?: any;
   matrixData?: any;
+  loadAssignments?:any
 }
 
 const DispatchAssignmentGridModal = ({
@@ -33,6 +34,7 @@ const DispatchAssignmentGridModal = ({
   jobHeaders,
   footer,
   matrixData,
+  loadAssignments,
 }: Props) => {
   const { selectedDate } = useAssignLoad();
   return (
@@ -69,6 +71,8 @@ const DispatchAssignmentGridModal = ({
                 jobHeaders={jobHeaders}
                 footer={footer}
                 matrixData={matrixData}
+                selectedDate={selectedDate}
+                loadAssignments={loadAssignments}
               />
             </div>
           </div>

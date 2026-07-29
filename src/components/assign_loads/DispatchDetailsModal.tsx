@@ -45,7 +45,6 @@ const DispatchDetailsModal = ({
   const loadCardsRedux = useAppSelector(selectLoadCards);
 
   const activeDay = selectedDay || selectedDayRedux;
-
   const currentLoadCards = useMemo(() => {
     return loadCards;
   }, [loadCards]);

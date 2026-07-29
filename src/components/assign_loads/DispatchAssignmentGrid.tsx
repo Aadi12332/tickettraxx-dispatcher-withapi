@@ -5,11 +5,12 @@ import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { AllCommunityModule, themeQuartz } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
-
+import { toast } from "react-toastify";
 const modules = [AllCommunityModule];
 
 import DriverTooltip from "./DriverTooltip";
 import { Tooltip } from "@mui/material";
+import { createAssignment, updateAssignment } from "../../services/auth.service";
 
 const LOAD_COLOR_MAP: Record<number, string> = {
   1: "#FDE68A", // yellow
@@ -183,40 +184,42 @@ const DispatchAssignmentGrid = ({
   footer,
   matrixData,
   enableColumnResize = true,
+  selectedDate,
+  loadAssignments
 }: any) => {
   // const jobHeaders = useAppSelector(selectJobHeaders);
   const [driverPopup, setDriverPopup] = useState<any>(null);
 
-const pinnedBottomRowData = useMemo(() => {
-  if (!jobHeaders) return [];
+  const pinnedBottomRowData = useMemo(() => {
+    if (!jobHeaders) return [];
 
-  const totalJobs = jobHeaders.map((job: string, index: number) => ({
-    id: job,
-    loads: matrixData?.columns?.[index]?.totalAssigned ?? 0,
-  }));
+    const totalJobs = jobHeaders.map((job: string, index: number) => ({
+      id: job,
+      loads: matrixData?.columns?.[index]?.totalAssigned ?? 0,
+    }));
 
-  const remainingJobs = jobHeaders.map((job: string, index: number) => ({
-    id: job,
-    loads: matrixData?.columns?.[index]?.remaining ?? 0,
-  }));
+    const remainingJobs = jobHeaders.map((job: string, index: number) => ({
+      id: job,
+      loads: matrixData?.columns?.[index]?.remaining ?? 0,
+    }));
 
-  return [
-    {
-      truckId: "Total",
-      rowType: "total",
-      jobs: totalJobs,
-      tonnage: footer?.grandTonnage ?? 0,
-      total: footer?.grandTotal ?? 0,
-    },
-    {
-      truckId: "Remaining",
-      rowType: "remaining",
-      jobs: remainingJobs,
-      tonnage: footer?.grandRemaining ?? 0,
-      total: footer?.grandRemainingTotal ?? 0,
-    },
-  ];
-}, [footer, jobHeaders, matrixData]);
+    return [
+      {
+        truckId: "Total",
+        rowType: "total",
+        jobs: totalJobs,
+        tonnage: footer?.grandTonnage ?? 0,
+        total: footer?.grandTotal ?? 0,
+      },
+      {
+        truckId: "Remaining",
+        rowType: "remaining",
+        jobs: remainingJobs,
+        tonnage: footer?.grandRemaining ?? 0,
+        total: footer?.grandRemainingTotal ?? 0,
+      },
+    ];
+  }, [footer, jobHeaders, matrixData]);
   const defaultColDef = useMemo(
     () => ({
       cellStyle: (params: any) => {
@@ -316,6 +319,10 @@ const pinnedBottomRowData = useMemo(() => {
     }),
     [],
   );
+  const getUniqueRowId = useCallback((data: any) => {
+    if (data.rowType) return data.rowType; // "total" / "remaining"
+    return String(data._rowKey); // ab har row ke paas guaranteed unique key hai
+  }, []);
   const columnDefs = useMemo<ColDef[]>(
     () => [
       {
@@ -353,12 +360,12 @@ const pinnedBottomRowData = useMemo(() => {
 
         valueGetter: (params) => {
           const truckIds = params.data?.truckId ?? [];
-
+          console.log({ truckIds })
           if (!Array.isArray(truckIds)) return truckIds;
 
-          return truckIds.length === 1
+          return truckIds?.length > 0 ? truckIds.length === 1
             ? truckIds[0]
-            : `${truckIds[0]} to ${truckIds[truckIds.length - 1]}`;
+            : `${truckIds[0]} to ${truckIds[truckIds.length - 1]}` : "-";
         },
 
         headerComponent: () => (
@@ -392,7 +399,7 @@ const pinnedBottomRowData = useMemo(() => {
       ...(jobHeaders ?? []).map((job: string, index: number) => {
         const occurrencesBefore = jobHeaders
           .slice(0, index)
-          .filter((h:any) => h === job).length;
+          .filter((h: any) => h === job).length;
 
         const getCurrentJobEntry = (data: any) => {
           if (!data?.jobs) return null;
@@ -457,6 +464,13 @@ const pinnedBottomRowData = useMemo(() => {
           cellRendererParams: {
             occurrencesBefore,
             jobId: matrixData?.columns?.[index]?.poCode,
+            contractorId: matrixData?.columns?.[index]?.contractorId,
+            dispatchId: matrixData?.columns?.[index]?.dispatchId,
+
+            driverId: matrixData?.columns?.[index]?.driverId,
+
+            id: matrixData?.columns?.[index]?.id,
+            jobIdString: matrixData?.columns?.[index]?.jobId,
           },
           editable: (params: any) => {
             if (!enableColumnResize) return false;
@@ -481,7 +495,18 @@ const pinnedBottomRowData = useMemo(() => {
             const newValue = parseInt(params.newValue, 10);
             if (isNaN(newValue) && params.newValue !== "") return false;
             const finalValue = isNaN(newValue) ? 0 : newValue;
+const truckCount = params.data?.truckId?.length || 0;
+const maxLoads = Math.min(truckCount, 5);
 
+if (truckCount === 0) {
+  toast.error("No truck assigned.");
+  return false;
+}
+
+if (finalValue > maxLoads) {
+  toast.error(`Maximum ${maxLoads} load(s) allowed.`);
+  return false;
+}
             let matchCount = 0;
             const targetIndex = (params.data.jobs || []).findIndex((j: any) => {
               if (j.id === job) {
@@ -491,60 +516,26 @@ const pinnedBottomRowData = useMemo(() => {
               return false;
             });
 
+            let jobs: any[];
             if (targetIndex !== -1) {
-              const jobs = [...(params.data.jobs || [])];
-
-              jobs[targetIndex] = {
-                ...jobs[targetIndex],
-                loads: finalValue,
-              };
-
-              const updatedRows = rowData.map((row: any) => {
-                if (row.driver !== params.data.driver) return row;
-
-                return {
-                  ...row,
-                  jobs,
-                };
-              });
-
-              setRowData(updatedRows);
-
-              params.data.jobs = jobs;
-
-              return true;
+              jobs = [...(params.data.jobs || [])];
+              jobs[targetIndex] = { ...jobs[targetIndex], loads: finalValue };
             } else {
-              const jobs = [...(params.data.jobs || [])];
-
+              jobs = [...(params.data.jobs || [])];
               let currentCount = jobs.filter((j: any) => j.id === job).length;
-
               while (currentCount < occurrencesBefore) {
-                jobs.push({
-                  id: job,
-                  loads: 0,
-                });
+                jobs.push({ id: job, loads: 0 });
                 currentCount++;
               }
-
-              jobs.push({
-                id: job,
-                loads: finalValue,
-                isManual: true,
-              });
-
-              const updatedRows = rowData.map((row: any) => {
-                if (row.driver !== params.data.driver) return row;
-
-                return {
-                  ...row,
-                  jobs,
-                };
-              });
-
-              setRowData(updatedRows);
-
-              return true;
+              jobs.push({ id: job, loads: finalValue, isManual: true });
             }
+
+            setRowData((prev: any[]) =>
+              prev.map((row: any) =>
+                row._rowKey === params.data._rowKey ? { ...row, jobs } : row,
+              ),
+            );
+
             return true;
           },
           headerClass: index % 2 === 0 ? "job-yellow" : "job-orange",
@@ -552,31 +543,31 @@ const pinnedBottomRowData = useMemo(() => {
       }),
 
       {
-  field: "tonnage",
-  headerName: "Tonnage",
-  minWidth: 85,
-  flex: 1,
-  valueFormatter: (params) =>
-    params.value != null ? `$${params.value}` : "",
-},
+        field: "tonnage",
+        headerName: "Tonnage",
+        minWidth: 85,
+        flex: 1,
+        valueFormatter: (params) =>
+          params.value != null ? `$${params.value}` : "",
+      },
 
       {
-  field: "total",
-  headerName: "Total",
-  flex: 1,
-  minWidth: 80,
-  valueFormatter: (params) =>
-    params.value != null ? `$${params.value}` : "",
-  colSpan: (params) => {
-    if (
-      params.data?.rowType === "total" ||
-      params.data?.rowType === "remaining"
-    ) {
-      return 4;
-    }
-    return 1;
-  },
-},
+        field: "total",
+        headerName: "Total",
+        flex: 1,
+        minWidth: 80,
+        valueFormatter: (params) =>
+          params.value != null ? `$${params.value}` : "",
+        colSpan: (params) => {
+          if (
+            params.data?.rowType === "total" ||
+            params.data?.rowType === "remaining"
+          ) {
+            return 4;
+          }
+          return 1;
+        },
+      },
 
       // {
       //   field: "weCall",
@@ -598,7 +589,7 @@ const pinnedBottomRowData = useMemo(() => {
     [
       jobHeaders,
       matrixData,
-      rowData,
+      // rowData,
       setRowData,
       enableColumnResize,
     ],
@@ -662,7 +653,6 @@ const pinnedBottomRowData = useMemo(() => {
       originalRowData,
     ],
   );
-
   return (
     <AgGridProvider modules={modules}>
       <div
@@ -682,11 +672,71 @@ const pinnedBottomRowData = useMemo(() => {
         <div className="ag-theme-alpine w-full h-full">
           <AgGridReact
             ref={gridRef}
+            getRowId={(params) => getUniqueRowId(params.data)}
             theme={themeQuartz}
             rowData={rowData}
-            // onCellValueChanged={() => {
-            //   setRowData((prev: any) => [...prev]);
-            // }}
+            onCellValueChanged={async (params: any) => {
+              if (!params.colDef.field?.startsWith("jobs.")) return;
+
+              const job = params.data.jobs.find(
+                (i: any) => i.id === params.colDef.cellRendererParams?.jobId,
+              );
+
+              const truckCount = params.data?.truckId?.length || 0;
+const maxLoads = Math.min(truckCount, 5);
+const loadCount = Number(params.newRawValue);
+
+if (truckCount === 0) {
+  toast.error("No truck assigned.");
+  loadAssignments();
+  return;
+}
+
+if (loadCount > maxLoads) {
+  toast.error(`Maximum ${maxLoads} load(s) allowed.`);
+  loadAssignments();
+  return;
+}
+
+              try {
+                if (job?.assignmentId) {
+                  await updateAssignment(job.assignmentId, +params.newRawValue);
+
+                  toast.success("Assignment updated successfully.");
+
+                  loadAssignments();
+                } else {
+                  await createAssignment({
+                    dispatchId: params?.column?.colDef?.cellRendererParams?.dispatchId,
+                    loadId: params?.column?.colDef?.cellRendererParams?.id,
+                    contractorId: params?.data?.contractorId,
+                    driverId: params?.data?.driverId,
+                    truckId: params.data.trucks?.[0]?.id,
+                    date: selectedDate ?? new Date(),
+                    loadsCount: +params.newRawValue,
+                  });
+
+                  toast.success("Assignment created successfully.");
+
+                  loadAssignments();
+                }
+              } catch (err: any) {
+                console.error(err);
+
+                const message =
+                  err?.response?.data?.error?.details?.body?.[0] ||
+                  err?.response?.data?.error?.message ||
+                  err?.response?.data?.message ||
+                  "Something went wrong";
+
+                toast.error(message);
+                  loadAssignments();
+
+
+
+              }
+            }}
+
             columnDefs={columnDefs}
             context={gridContext}
             defaultColDef={defaultColDef}

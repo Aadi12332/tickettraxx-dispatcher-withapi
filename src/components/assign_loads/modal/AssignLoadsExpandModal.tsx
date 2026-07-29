@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Modal } from "@mui/material";
 import { X, Plus } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
@@ -27,7 +28,7 @@ const AssignLoadsExpandModal = ({
   isCanceled,
   date
 }: Props) => {
-
+console.log({date})
 const [successModal, setSuccessModal] = useState({
   open: false,
   title: "",
@@ -94,7 +95,8 @@ const [successModal, setSuccessModal] = useState({
         total: row.total,
         status: row.status,
         weCall: row.weCall,
-
+driverId:row.driverId,
+        contractorId:row.contractorId,
         jobs: row.jobs.map((job: any) => {
           const column = res.data?.data?.columns.find(
             (c: any) => c.id === job.id

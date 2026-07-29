@@ -80,9 +80,10 @@ const loadsRef = useRef<HTMLInputElement>(null);
   });
   const [jobs, setJobs] = useState<Job[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
-  const [siteMap, setSiteMap] = useState<Record<string, string>>({});
-  const [optionsLoading, setOptionsLoading] = useState(false);
 
+  const [optionsLoading, setOptionsLoading] = useState(false);
+const [pickupSites, setPickupSites] = useState<any[]>([]);
+const [deliverySites, setDeliverySites] = useState<any[]>([]);
   const navigate = useNavigate();
 
   const loadDispatch = async (dispatchId: string) => {
@@ -131,13 +132,13 @@ const loadsRef = useRef<HTMLInputElement>(null);
     const loadOptions = async () => {
       setOptionsLoading(true);
       try {
-        const [jobsRes, pickupRes, deliverRes, materialsRes] =
-          await Promise.all([
-            getJobsApi(1, 100),
-            getMaterialsApi(1, 100),
-            siteService.getSites({ type: "pickup", limit: 100 }),
-            siteService.getSites({ type: "deliver", limit: 100 }),
-          ]);
+      const [jobsRes, materialsRes, pickupRes, deliverRes] =
+  await Promise.all([
+    getJobsApi(1, 100),
+    getMaterialsApi(1, 100),
+    siteService.getSites({ type: "pickup", limit: 100 }),
+    siteService.getSites({ type: "deliver", limit: 100 }),
+  ]);
 
         setJobs(jobsRes.data);
         setMaterials(materialsRes.data);
@@ -146,7 +147,8 @@ const loadsRef = useRef<HTMLInputElement>(null);
         [...pickupRes.data, ...deliverRes.data].forEach((site) => {
           map[site._id] = site.name;
         });
-        setSiteMap(map);
+        setPickupSites(pickupRes.data);
+setDeliverySites(deliverRes.data);
       } catch (err) {
         console.error("Failed to load dispatch options:", err);
       } finally {
@@ -261,9 +263,22 @@ const loadsRef = useRef<HTMLInputElement>(null);
   }, [jobs, materials, formData.poCode]);
 
   const pickupOptions = useMemo(
-    () => Object.entries(siteMap).map(([value, label]) => ({ label, value })),
-    [siteMap],
-  );
+  () =>
+    pickupSites.map((site) => ({
+      label: site.name,
+      value: site._id,
+    })),
+  [pickupSites],
+);
+
+const deliveryOptions = useMemo(
+  () =>
+    deliverySites.map((site) => ({
+      label: site.name,
+      value: site._id,
+    })),
+  [deliverySites],
+);
 
   const handleSubmit = async () => {
     const loads = Number(formData.loads);
@@ -465,7 +480,7 @@ if (!formData.loads || loads <= 0) {
                     label="Deliver"
                     value={formData.deliver}
                     onChange={handleChange("deliver")}
-                    options={pickupOptions}
+                    options={deliveryOptions}
                     addNewLabel="Add New"
                     onAddNew={onOpenPickupModal}
                     addNewMode="modal"

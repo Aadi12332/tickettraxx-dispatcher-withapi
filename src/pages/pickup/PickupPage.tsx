@@ -176,7 +176,7 @@ const handleDeleteSite = async (siteId: string) => {
         </div>
       </PageHeader>
 
-      <div className="bg-white">
+      <div className="bg-white p-4">
         <TableFilters
           searchValue={search}
           onSearchChange={setSearch}

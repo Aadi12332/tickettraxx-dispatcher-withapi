@@ -15,7 +15,6 @@ import CommonFilterDropdown from "../../components/common/CommonFilterDropdown";
 import LoadUpdateSuccessModal from "../../components/common/modal/LoadUpdateSuccessModal";
 import ExportButton from "../../components/common/ExportButton";
 import { getFscApi, deleteFscApi } from "../../services/auth.service";
-import type { Customer } from "../../types/auth.types";
 
 export const fscColumns = [
   { label: "Customer", key: "customer" },
@@ -79,18 +78,23 @@ const FscPage = () => {
     try {
       const res = await getFscApi(page, limit);
       const rows: FscRow[] = res.data.map((item) => {
-        const customer = item.customerId as Customer;
-        return {
-          _id: item._id,
-          customerId: typeof item.customerId === "string" ? item.customerId : customer._id,
-          customer: typeof item.customerId === "string" ? "" : customer.name,
-          from: dayjs(item.fromDate).format("MM/DD/YYYY"),
-          to: dayjs(item.toDate).format("MM/DD/YYYY"),
-          percentage: `${item.percentage.toFixed(2)}%`,
-          rawFromDate: item.fromDate,
-          rawToDate: item.toDate,
-          rawPercentage: item.percentage,
-        };
+        const customer =
+  item.customerId &&
+  typeof item.customerId === "object"
+    ? item.customerId
+    : null;
+
+return {
+  _id: item._id,
+  customerId: customer?._id ?? "",
+  customer: customer?.name ?? "All Customers",
+  from: dayjs(item.fromDate).format("MM/DD/YYYY"),
+  to: dayjs(item.toDate).format("MM/DD/YYYY"),
+  percentage: `${item.percentage.toFixed(2)}%`,
+  rawFromDate: item.fromDate,
+  rawToDate: item.toDate,
+  rawPercentage: item.percentage,
+};
       });
       setData(rows);
       setPagination(res.pagination);
@@ -236,7 +240,7 @@ const FscPage = () => {
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 
-      <div className="bg-white">
+      <div className="bg-white p-4">
         <TableFilters
           searchValue={search}
           onSearchChange={setSearch}
@@ -246,7 +250,7 @@ const FscPage = () => {
           onEntriesChange={setEntries}
         />
 
-        <div className="p-4 pb-0 space-y-4">
+        <div className="space-y-4">
           <CommonFilterDropdown
             title="Filter"
             value={filter}

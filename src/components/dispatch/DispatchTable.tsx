@@ -131,7 +131,7 @@ const DispatchTable = ({
                     <span className="text-[#374151]">{dash(row.customer)}</span>
                     <span className="text-[#374151]">{dash(row.jobCode)}</span>
                     <span className="text-[#374151] flex items-center gap-1 px-2">
-                      {dash(row.pickup)} <span className="text-[#9CA3AF]">→</span>{" "}
+                      <span className="line-clamp-2" title={dash(row.delivery)}>{dash(row.pickup)}</span> <span className="text-[#9CA3AF]">→</span>{" "}
                       <span className="line-clamp-2" title={dash(row.delivery)}>{dash(row.delivery)}</span>
                     </span>
                     <span className="text-[#374151]">{dash(row.material)}</span>
@@ -145,27 +145,27 @@ const DispatchTable = ({
                     </span>
 
                     <div
-                      className="flex items-center gap-4 text-[#374151]"
+                      className="flex items-center gap-2.5 text-[#374151]"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
-                        className="hover:text-[#233B73] cursor-pointer"
+                        className="hover:text-[#233B73] border border-[#233B73] rounded-md p-1 cursor-pointer"
                         onClick={() => onView?.(row)}
                       >
-                        <Eye size={16} />
+                        <Eye size={14} />
                       </button>
 
                       {row.status === "Active" && (
                         <button
-                          className="hover:text-[#233B73] cursor-pointer"
+                          className="hover:text-[#233B73] border border-[#233B73] rounded-md p-1 cursor-pointer"
                           onClick={() => onEdit?.(row)}
                         >
-                          <Pencil size={16} />
+                          <Pencil size={14} />
                         </button>
                       )}
 
                       <button
-                        className="hover:text-[#233B73] cursor-pointer"
+                        className="hover:text-[#233B73] border border-[#233B73] rounded-md p-1 cursor-pointer"
                         onClick={() => handleCopy(row)}
                       >
                         {copiedId === row.id ? (
@@ -173,12 +173,12 @@ const DispatchTable = ({
                             Copied
                           </span>
                         ) : (
-                          <Copy size={16} />
+                          <Copy size={14} />
                         )}
                       </button>
 
                       <button
-                        className="hover:text-[#233B73] cursor-pointer"
+                        className="hover:text-[#233B73] border border-[#233B73] rounded-md p-1 cursor-pointer"
                         onClick={() => handleDownload(row)}
                       >
                         {downloadedId === row.id ? (
@@ -186,7 +186,7 @@ const DispatchTable = ({
                             Downloaded
                           </span>
                         ) : (
-                          <Download size={16} />
+                          <Download size={14} />
                         )}
                       </button>
                     </div>
