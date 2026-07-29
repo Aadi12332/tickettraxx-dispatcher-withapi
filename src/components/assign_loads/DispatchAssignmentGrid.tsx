@@ -4,7 +4,6 @@ import {
   useRef,
   useEffect,
   useCallback,
-  type MouseEvent,
 } from "react";
 import { AgGridProvider, AgGridReact } from "ag-grid-react";
 
