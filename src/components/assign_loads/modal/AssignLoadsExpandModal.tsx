@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Modal } from "@mui/material";
 import { X, Plus } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";

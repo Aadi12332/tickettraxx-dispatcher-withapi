@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { RefreshCcw } from "lucide-react";
 import PageHeader from "../../components/common/PageHeader";
 import { useState, useMemo, useEffect } from "react";

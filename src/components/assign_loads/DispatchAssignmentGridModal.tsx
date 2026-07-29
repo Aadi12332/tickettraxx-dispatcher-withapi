@@ -1,7 +1,6 @@
 import { Modal } from "@mui/material";
 import collapsed from "../../assets/icons/collapsed.svg";
 import DispatchAssignmentGrid from "./DispatchAssignmentGrid";
-// import { useEffect, useState } from "react";
 import { useAssignLoad } from "../../pages/assign_loads/AssignLoadContext";
 
 interface Props {
