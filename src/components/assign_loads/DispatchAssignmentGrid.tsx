@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback, type MouseEvent } from "react";
 import { AgGridProvider, AgGridReact } from "ag-grid-react";
 
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
@@ -10,7 +10,11 @@ const modules = [AllCommunityModule];
 
 import DriverTooltip from "./DriverTooltip";
 import { Tooltip } from "@mui/material";
-import { createAssignment, updateAssignment } from "../../services/auth.service";
+import {
+  createAssignment,
+  updateAssignment,
+} from "../../services/auth.service";
+import { XCircle } from "lucide-react";
 
 const LOAD_COLOR_MAP: Record<number, string> = {
   1: "#FDE68A", // yellow
@@ -20,7 +24,6 @@ const LOAD_COLOR_MAP: Record<number, string> = {
   5: "#15803D", // dark green
 };
 
-
 const JobCell = (
   params: ICellRendererParams & { occurrencesBefore?: number; jobId?: string },
 ) => {
@@ -29,8 +32,7 @@ const JobCell = (
   const value =
     typeof params.value === "object" ? params.value?.loads : params.value;
 
-  if (value === undefined || value === null)
-    return null;
+  if (value === undefined || value === null) return null;
 
   const isSummaryRow =
     params.data?.rowType === "total" || params.data?.rowType === "remaining";
@@ -94,14 +96,35 @@ const JobCell = (
   }
 
   return (
-    <div
-      onClick={handleCellClick}
-      className={`flex items-center justify-center w-full h-full ${canClickToCancel ? "cursor-pointer" : ""
-        }`}
-    >
-      <span style={{ color: textColor, fontWeight: isBold ? 600 : undefined }}>
+    <div className="flex items-center justify-center gap-1 w-full h-full">
+      <span
+        onClick={handleCellClick}
+        className="inline-block min-w-max"
+        style={{
+          color: textColor,
+          fontWeight: isBold ? 600 : undefined,
+        }}
+      >
         {params.value}
       </span>
+
+      {Number(params.value) > 0 && (
+       <div
+  className="flex items-center justify-center gap-1 w-full h-full"
+  onMouseDown={(e) => e.stopPropagation()}
+>
+
+  <XCircle
+    size={12}
+    className="cursor-pointer text-red-500"
+    onMouseDown={(e: MouseEvent<SVGSVGElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      params.context.openCancelDrawer();
+    }}
+  />
+</div>
+      )}
     </div>
   );
 };
@@ -140,8 +163,7 @@ const JobCell = (
 const DriverRenderer = (props: any) => {
   // const truckId = props.data?.truckId;
   const canOpenTooltip =
-    Array.isArray(props.data?.truckId) &&
-    props.data.truckId.length > 1;
+    Array.isArray(props.data?.truckId) && props.data.truckId.length > 1;
 
   return (
     <button
@@ -185,7 +207,7 @@ const DispatchAssignmentGrid = ({
   matrixData,
   enableColumnResize = true,
   selectedDate,
-  loadAssignments
+  loadAssignments,
 }: any) => {
   // const jobHeaders = useAppSelector(selectJobHeaders);
   const [driverPopup, setDriverPopup] = useState<any>(null);
@@ -360,12 +382,14 @@ const DispatchAssignmentGrid = ({
 
         valueGetter: (params) => {
           const truckIds = params.data?.truckId ?? [];
-          console.log({ truckIds })
+          console.log({ truckIds });
           if (!Array.isArray(truckIds)) return truckIds;
 
-          return truckIds?.length > 0 ? truckIds.length === 1
-            ? truckIds[0]
-            : `${truckIds[0]} to ${truckIds[truckIds.length - 1]}` : "-";
+          return truckIds?.length > 0
+            ? truckIds.length === 1
+              ? truckIds[0]
+              : `${truckIds[0]} to ${truckIds[truckIds.length - 1]}`
+            : "-";
         },
 
         headerComponent: () => (
@@ -495,18 +519,18 @@ const DispatchAssignmentGrid = ({
             const newValue = parseInt(params.newValue, 10);
             if (isNaN(newValue) && params.newValue !== "") return false;
             const finalValue = isNaN(newValue) ? 0 : newValue;
-const truckCount = params.data?.truckId?.length || 0;
-const maxLoads = Math.min(truckCount, 5);
+            const truckCount = params.data?.truckId?.length || 0;
+            const maxLoads = Math.min(truckCount, 5);
 
-if (truckCount === 0) {
-  toast.error("No truck assigned.");
-  return false;
-}
+            if (truckCount === 0) {
+              toast.error("No truck assigned.");
+              return false;
+            }
 
-if (finalValue > maxLoads) {
-  toast.error(`Maximum ${maxLoads} load(s) allowed.`);
-  return false;
-}
+            if (finalValue > maxLoads) {
+              toast.error(`Maximum ${maxLoads} load(s) allowed.`);
+              return false;
+            }
             let matchCount = 0;
             const targetIndex = (params.data.jobs || []).findIndex((j: any) => {
               if (j.id === job) {
@@ -683,20 +707,20 @@ if (finalValue > maxLoads) {
               );
 
               const truckCount = params.data?.truckId?.length || 0;
-const maxLoads = Math.min(truckCount, 5);
-const loadCount = Number(params.newRawValue);
+              const maxLoads = Math.min(truckCount, 5);
+              const loadCount = Number(params.newRawValue);
 
-if (truckCount === 0) {
-  toast.error("No truck assigned.");
-  loadAssignments();
-  return;
-}
+              if (truckCount === 0) {
+                toast.error("No truck assigned.");
+                loadAssignments();
+                return;
+              }
 
-if (loadCount > maxLoads) {
-  toast.error(`Maximum ${maxLoads} load(s) allowed.`);
-  loadAssignments();
-  return;
-}
+              if (loadCount > maxLoads) {
+                toast.error(`Maximum ${maxLoads} load(s) allowed.`);
+                loadAssignments();
+                return;
+              }
 
               try {
                 if (job?.assignmentId) {
@@ -707,7 +731,8 @@ if (loadCount > maxLoads) {
                   loadAssignments();
                 } else {
                   await createAssignment({
-                    dispatchId: params?.column?.colDef?.cellRendererParams?.dispatchId,
+                    dispatchId:
+                      params?.column?.colDef?.cellRendererParams?.dispatchId,
                     loadId: params?.column?.colDef?.cellRendererParams?.id,
                     contractorId: params?.data?.contractorId,
                     driverId: params?.data?.driverId,
@@ -730,13 +755,9 @@ if (loadCount > maxLoads) {
                   "Something went wrong";
 
                 toast.error(message);
-                  loadAssignments();
-
-
-
+                loadAssignments();
               }
             }}
-
             columnDefs={columnDefs}
             context={gridContext}
             defaultColDef={defaultColDef}

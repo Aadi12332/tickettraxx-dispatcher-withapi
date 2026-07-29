@@ -24,8 +24,9 @@ interface AssignLoadCardProps {
   material: string;
   time: string;
   headerColor: "yellow" | "orange";
+  dispatchId?: string;
   onCancelReroute?: () => void;
-  onEditDispatch?: () => void;
+  onEditDispatch?: (dispatchId?: string) => void;
   expandOnHover?: boolean;
 }
 
@@ -40,6 +41,7 @@ const AssignLoadCard = ({
   material,
   time,
   headerColor = "yellow",
+  dispatchId,
   onCancelReroute,
   onEditDispatch,
   expandOnHover = true,
@@ -267,7 +269,7 @@ const AssignLoadCard = ({
         <MenuItem
           onClick={() => {
             handleMenuClose();
-            onEditDispatch?.();
+            onEditDispatch?.(dispatchId);
           }}
         >
           <PenLine size={12} color="#3B82F6" strokeWidth={3} />

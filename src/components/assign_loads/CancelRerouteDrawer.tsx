@@ -14,10 +14,9 @@ interface Props {
 }
 
 const CancelRerouteDrawer = ({ open, onClose, onShowToast }: Props) => {
-  const [selectedAction, setSelectedAction] = useState<
-    "return" | "reroute" | null
-  >(null);
+  const [, setSelectedAction] = useState<"return" | "reroute" | null>(null);
 const [newLocation, setNewLocation] = useState("");
+const [showRemainingLoads, setShowRemainingLoads] = useState(false);
 const handleActionClick = (title: string) => {
   onShowToast?.(title);
 };
@@ -188,11 +187,17 @@ const handleActionClick = (title: string) => {
               </div>
 
               <button type="button"
-                  onClick={() =>
-                    handleActionClick(
-                      "You successfully sent the reminder to return to the pickup location."
-                    )
-                  }
+                 onClick={() => {
+  if (!showRemainingLoads) {
+    setSelectedAction("return");
+    setShowRemainingLoads(true);
+    return;
+  }
+
+  handleActionClick(
+    "You successfully sent the reminder to return to the pickup location."
+  );
+}}
                 className="mt-5 lg:mt-auto w-full h-10 rounded-lg bg-[#D99018] text-white text-sm font-semibold hover:opacity-90 cursor-pointer"
               >
                 Confirm Return to Pickup
@@ -280,7 +285,7 @@ const handleActionClick = (title: string) => {
             </div>
           </div>
 
-          {selectedAction === "return" && (
+          {showRemainingLoads && (
             <div className="mt-6 border border-gray-200 rounded-[10px] p-3 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[#D99018] font-medium text-base">

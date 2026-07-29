@@ -92,7 +92,7 @@ const [deliverySites, setDeliverySites] = useState<any[]>([]);
     const load = res.data[0];
 
     setFormData({
-      dispatchDate: dayjs(load.createdAt).format("YYYY-MM-DD"),
+      dispatchDate: dayjs(load.date).format("YYYY-MM-DD"),
       customer: resolveId(load.customerId),
       poCode: resolveId(load.jobId),
       material: resolveId(load.materialId),
@@ -105,7 +105,7 @@ const [deliverySites, setDeliverySites] = useState<any[]>([]);
       endTime: load.endTime,
       comment: load.comment ?? "",
     });
-
+setDispatchId(load.dispatchId);
     setColumns([1]);
   };
 
@@ -353,6 +353,7 @@ if (!formData.loads || loads <= 0) {
     formData.poCode.trim() !== "" &&
     formData.material.trim() !== "" &&
     formData.loads.trim() !== "" &&
+Number(formData.loads) >= 1 &&
     formData.invoiceRate.trim() !== "" &&
     formData.contractorRate.trim() !== "" &&
     formData.pickup.trim() !== "" &&
@@ -361,7 +362,10 @@ if (!formData.loads || loads <= 0) {
     formData.endTime.trim() !== "" &&
     columns.length > 0;
 
-  const disableActions = (!isEdit && !isFormValid) || submitting;
+const disableActions =
+  !isFormValid ||
+  Number(formData.loads) <= 0 ||
+  submitting;
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);

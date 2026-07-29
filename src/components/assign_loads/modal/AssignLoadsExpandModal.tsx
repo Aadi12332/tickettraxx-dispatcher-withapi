@@ -35,6 +35,7 @@ const [successModal, setSuccessModal] = useState({
 });
   const [openCancelDrawer, setOpenCancelDrawer] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedDispatchId, setSelectedDispatchId] = useState<string | null>(null);
   const [openModal, setOpenModal] = useState(false);
   const [buttonStatus] = useState(false);
   const [cardsLoading, setCardsLoading] = useState(false);
@@ -182,7 +183,10 @@ console.log({cardsLoading, assignmentCards, matrixData, footer, rowData, origina
                       {...card}
                       expandOnHover={true}
                       onCancelReroute={() => setOpenCancelDrawer(true)}
-                      onEditDispatch={() => setShowEditModal(true)}
+                      onEditDispatch={(dispatchId) => {
+                        setSelectedDispatchId(dispatchId ?? null);
+                        setShowEditModal(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -252,8 +256,12 @@ console.log({cardsLoading, assignmentCards, matrixData, footer, rowData, origina
 
       <EditDispatchModal
         open={showEditModal}
-        onClose={() => setShowEditModal(false)}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedDispatchId(null);
+        }}
         isEdit={true}
+        dispatchId={selectedDispatchId}
       />
     </>
   );

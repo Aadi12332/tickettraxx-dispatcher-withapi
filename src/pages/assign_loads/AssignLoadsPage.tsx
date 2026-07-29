@@ -35,6 +35,7 @@ interface LoadCard {
   material: string;
   time: string;
   jobId?: string;
+  dispatchId?: string;
   headerColor?: "yellow" | "orange";
 }
 
@@ -47,6 +48,7 @@ export const mapMatrixColumnToCard = (item: any): LoadCard => ({
   material: item.material,
   time: item.time,
   jobId: item.poCode,
+  dispatchId: item.dispatchId,
   remaining: item.remaining,
   contractorRate: item.contractorRate,
   headerColor: item.headerColor ?? "yellow",
@@ -68,6 +70,7 @@ const AssignLoadsPage = () => {
   const [openDispatchModal, setOpenDispatchModal] = useState(false);
   const [openGridModal, setOpenGridModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedDispatchId, setSelectedDispatchId] = useState<string | null>(null);
   const [isLiveTrackingModalOpen, setIsLiveTrackingModalOpen] = useState(false);
   const [buttonStatus] = useState(false);
   const [successModal, setSuccessModal] = useState({
@@ -86,23 +89,23 @@ const { selectedDate, setSelectedDate } = useAssignLoad();
     sessionStorage.setItem("assignLoadsDate", selectedDate);
   }, [selectedDate]);
 
-  const weekDays = useMemo(() => {
-    const today = new Date();
+const weekDays = useMemo(() => {
+  const today = new Date();
 
-    return Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() + index);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (6 - index)); // last 6 days + today
 
-      const day = date
-        .toLocaleDateString("en-US", { weekday: "short" })
-        .toUpperCase();
+    const day = date
+      .toLocaleDateString("en-US", { weekday: "short" })
+      .toUpperCase();
 
-      return {
-        label: `${day} ${date.getMonth() + 1}/${date.getDate()}`,
-        value: date.toISOString().split("T")[0],
-      };
-    });
-  }, []);
+    return {
+      label: `${day} ${date.getMonth() + 1}/${date.getDate()}`,
+      value: date.toISOString().split("T")[0],
+    };
+  });
+}, []);
 
   useEffect(() => {
     const selected = weekDays.find((d) => d.value === selectedDate);
@@ -401,7 +404,10 @@ const { selectedDate, setSelectedDate } = useAssignLoad();
                         key={index}
                         {...card}
                         onCancelReroute={() => setOpenCancelDrawer(true)}
-                        onEditDispatch={() => setShowEditModal(true)}
+                        onEditDispatch={(dispatchId) => {
+                          setSelectedDispatchId(dispatchId ?? null);
+                          setShowEditModal(true);
+                        }}
                       />
                     ))}
                   </div>
@@ -494,8 +500,12 @@ const { selectedDate, setSelectedDate } = useAssignLoad();
       />
       <EditDispatchModal
         open={showEditModal}
-        onClose={() => setShowEditModal(false)}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedDispatchId(null);
+        }}
         isEdit={true}
+        dispatchId={selectedDispatchId}
       />
       <LiveShipmentTrackingModal
         isOpen={isLiveTrackingModalOpen}
