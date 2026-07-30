@@ -31,6 +31,7 @@ export interface AssignLoadCardData {
   driverName: string;
   delivery: string;
   jobId?: string;
+  dispatchId?: string;
   contractorRate?:number;
   loads: number;
   rate: number;

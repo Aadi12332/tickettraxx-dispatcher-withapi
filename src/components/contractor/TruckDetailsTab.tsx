@@ -94,7 +94,7 @@ const TruckDetailsTab = ({ trucks, drivers, loading = false }: TruckDetailsTabPr
 
   return (
     <div className="border border-[#E5E7EB]">
-      <div className="flex items-center justify-between gap-3 p-2 sm:p-4">
+      <div className="flex items-center justify-between gap-3 p-4">
         <h3 className="text-base sm:text-lg font-semibold text-[#1B2D6B]">
           Truck Details
         </h3>
@@ -126,12 +126,14 @@ const TruckDetailsTab = ({ trucks, drivers, loading = false }: TruckDetailsTabPr
       {loading ? (
         <p className="text-sm text-[#6B7280] py-6 text-center">Loading trucks...</p>
       ) : (
-        <Table
+        <div className="p-4">
+          <Table
           data={filteredData}
           columns={truckDetailsColumns}
           isCheckbox={false}
           minWidth="min-w-[600px]"
         />
+        </div>
       )}
     </div>
   );

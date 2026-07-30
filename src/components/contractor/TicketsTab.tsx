@@ -272,12 +272,12 @@ const TicketsTab = () => {
     );
   }, [search]);
   return (
-    <div className="space-y-4">
-      <div className="mt-[px] w-full px-1 xl:px-3 border-b border-(--border-gray-2)">
+    <div className="">
+      <div className="mt-[px] w-full p-4 border-b border-(--border-gray-2)">
         <h1 className="text-base  font-semibold py-2">Tickets</h1>
       </div>
-      <div className=" bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-4 px-2">
+      <div className="p-4 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           {/* Left */}
           <p className="font-semibold text-sm ml-1">Total Tickets : 10</p>
 
@@ -311,7 +311,7 @@ const TicketsTab = () => {
           </div>
         </div>
         <div className="px-0 py-4 pb-0 space-y-3">
-          <div className="flex gap-2 sm:justify-between flex-wrap px-2">
+          <div className="flex gap-2 sm:justify-between flex-wrap">
             <CommonFilterDropdown
               title="Filter"
               value={filter}

@@ -48,7 +48,7 @@ const SettlementStatementTab = () => {
   const [isGenerated, setIsGenerated] = useState(false);
 
   return (
-    <div className="bg-white rounded-lg md:p-6 p-2">
+    <div className="bg-white rounded-lg p-4">
       {/* Top Section */}
       <div className="mb-6">
         <h2 className="text-lg font-bold text-[#1B2D6B] mb-6">Settlement Statement</h2>

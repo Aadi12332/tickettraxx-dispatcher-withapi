@@ -87,10 +87,9 @@ const DispatchTable = ({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-(--border-gray-2) overflow-hidden">
-      <div className="overflow-x-auto">
+    <div className="bg-white overflow-hidden">
+      <div className="overflow-x-auto border border-(--border-gray-2)">
         <div className="min-w-[1500px]">
-          {/* Header */}
           <div className="grid grid-cols-[32px_100px_120px_1fr_130px_200px_110px_100px_120px_140px_100px_130px] gap-2 px-5 py-4 border-b border-(--border-gray-2) text-sm font-semibold text-[#111827]">
             <span />
             <span>Dispatch ID</span>
@@ -131,7 +130,7 @@ const DispatchTable = ({
                     <span className="text-[#374151]">{dash(row.customer)}</span>
                     <span className="text-[#374151]">{dash(row.jobCode)}</span>
                     <span className="text-[#374151] flex items-center gap-1 px-2">
-                      <span className="line-clamp-2" title={dash(row.delivery)}>{dash(row.pickup)}</span> <span className="text-[#9CA3AF]">→</span>{" "}
+                      <span className="line-clamp-2" title={dash(row.pickup)}>{dash(row.pickup)}</span> <span className="text-[#9CA3AF]">→</span>{" "}
                       <span className="line-clamp-2" title={dash(row.delivery)}>{dash(row.delivery)}</span>
                     </span>
                     <span className="text-[#374151]">{dash(row.material)}</span>

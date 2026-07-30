@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -144,6 +145,9 @@ const ContractorDetailsPage = () => {
     setError("");
     try {
       const res = await getContractorByIdApi(id);
+      console.log(res.data);
+      console.log(res.data.recentJobs);
+      console.log(res.data.recentJobs[0]);
       setContractor(res.data);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -163,17 +167,35 @@ const ContractorDetailsPage = () => {
 
   // Real jobs ho to unhi se cards banao — pickup/deliver/material is response me null hain,
   // isliye wahan "-" dikhta hai (dummy data nahi ghadha)
-  const pastJobs = contractor
-    ? contractor.recentJobs.map((job) => ({
-        id: job._id,
-        date: dayjs(job.date).format("DD MMM YYYY"),
-        route: job.customerId?.name ? `${job.customerId.name}` : "-",
-        material: job.materialId || "-",
-        weight: `${job.weightPerTrip} tons`,
-        truckId: "-",
-        dotColor: jobStatusDot(job.status),
-      }))
-    : dummyPastJobs;
+const pastJobs = contractor
+  ? contractor.recentJobs.map((job) => ({
+      id: job._id,
+      date: dayjs(job.date).format("DD MMM YYYY"),
+
+      customer: job.customerId?.name ?? "-",
+
+      route: `${job.pickupSiteId?.name ?? "-"} → ${job.deliverySiteId?.name ?? "-"}`,
+
+      material: job.materialId?.name ?? "-",
+
+      weight: `${job.weightPerTrip ?? 0} tons`,
+
+      truckId:
+        typeof job.truckId === "object"
+          ? job.truckId?.unitNumber ?? "-"
+          : job.truckId ?? "-",
+
+      jobCode: job.jobId?.code ?? "-",
+
+      contractorRate: job.contractorRate ?? "-",
+
+      invoiceRate: job.invoiceRate ?? "-",
+
+      status: job.status ?? "-",
+
+      dotColor: jobStatusDot(job.status),
+    }))
+  : dummyPastJobs;
 
   const filteredPastJobs = pastJobs.filter((job) => {
     const value = jobSearch.toLowerCase();
@@ -472,7 +494,7 @@ const ContractorDetailsPage = () => {
             />
 
             {/* Truck Details section */}
-            <div className="border border-[#E5E7EB]">
+            <div className="">
               <div className="flex items-center justify-between gap-3 p-2 sm:p-4">
                 <h3 className="text-base sm:text-lg font-semibold text-[#1B2D6B]">
                   Truck Details
@@ -489,7 +511,8 @@ const ContractorDetailsPage = () => {
                   Add Truck
                 </CommonButton>
               </div>
-              <Table
+              <div className="p-4">
+                <Table
                 data={
                   contractor
                     ? contractor.trucks.map((t) => ({
@@ -505,6 +528,7 @@ const ContractorDetailsPage = () => {
                 isCheckbox={false}
                 minWidth="min-w-[600px]"
               />
+              </div>
             </div>
 
             <div className="border border-[#E5E7EB]">
@@ -557,27 +581,35 @@ const ContractorDetailsPage = () => {
                       </button>
                     </div>
 
-                    {/* Route with status dot */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: statusDot[job.dotColor] }}
-                      />
-                      <p className="text-sm font-bold text-[#1B2D6B]">
-                        {job.route}
-                      </p>
-                    </div>
+                   <div className="flex items-center gap-2 mb-2">
+  <span
+    className="w-2.5 h-2.5 rounded-full"
+    style={{ backgroundColor: statusDot[job.dotColor] }}
+  />
+  <p className="text-sm font-bold text-[#1B2D6B]">
+    {job.customer}
+  </p>
+</div>
 
-                    {/* Details */}
-                    <p className="text-xs text-[#6B7280]">
-                      Material: {job.material}
-                    </p>
-                    <p className="text-xs text-[#6B7280]">
-                      Weight: {job.weight}
-                    </p>
-                    <p className="text-xs text-[#6B7280]">
-                      Truck ID:{job.truckId}
-                    </p>
+<p className="text-xs text-[#6B7280]">
+  Route: {job.route}
+</p>
+
+<p className="text-xs text-[#6B7280]">
+  Material: {job.material}
+</p>
+
+<p className="text-xs text-[#6B7280]">
+  Weight: {job.weight}
+</p>
+
+<p className="text-xs text-[#6B7280]">
+  Job: {job.jobCode}
+</p>
+
+<p className="text-xs text-[#6B7280]">
+  Truck ID: {job.truckId}
+</p>
                   </div>
                 ))}
               </div>

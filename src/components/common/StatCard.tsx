@@ -8,7 +8,7 @@ interface StatsCardProps {
 
 const StatsCard = ({ icon, title, value }: StatsCardProps) => {
   return (
-<div className="w-full min-w-0 bg-white border border-[#E5E7EB] rounded-[5px] xl:px-5 px-3 py-2 flex items-center gap-2 shadow-sm">
+<div className="w-full min-w-0 bg-white border border-[#E5E7EB] rounded-[5px] xl:px-5 px-3 py-2 flex items-center gap-2">
       {/* Icon */}
       <div className="sm:w-[40px] w-8 sm:h-[40px] h-8 border border-[#1D3461] bg-[#B9D1FF73] sm:rounded-[14px] rounded-lg flex items-center justify-center shrink-0">
         {icon}

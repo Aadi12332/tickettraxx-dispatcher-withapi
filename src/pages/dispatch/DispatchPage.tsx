@@ -188,7 +188,7 @@ const [selectedDate, setSelectedDate] = useState<[Dayjs | null, Dayjs | null]>([
           </CommonButton>
         </div>
       </PageHeader>
-      <div className=" overflow-hidden">
+      <div className="bg-white p-4 overflow-hidden">
         <TableFilters
           period={period}
           onPeriodChange={setPeriod}
@@ -227,6 +227,7 @@ const [selectedDate, setSelectedDate] = useState<[Dayjs | null, Dayjs | null]>([
         isEdit
         dispatchId={selectedDispatchId}
         onOpenPickupModal={handleOpenPickupModal}
+        loadDispatches={loadDispatches}
       />
 
       <EditDispatchModal
@@ -234,6 +235,7 @@ const [selectedDate, setSelectedDate] = useState<[Dayjs | null, Dayjs | null]>([
         onClose={() => setDispatchModal("none")}
         title="Create Dispatch"
         onOpenPickupModal={handleOpenPickupModal}
+        loadDispatches={loadDispatches}
       />
       <CreatePickupModal
         open={openPickupModal}

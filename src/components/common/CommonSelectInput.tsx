@@ -64,16 +64,21 @@ const selectedLabel = selectedOption ? selectedOption.label : value || "";
           placeholder={`Enter ${label}`}
           onChange={(e) => setNewValue(e.target.value)}
           onBlur={() => {
-            if (newValue.trim()) {
-              onAddNew?.(newValue.trim());
+            const trimmedValue = newValue.trim();
+            if (trimmedValue) {
+              onAddNew?.(trimmedValue);
+              onChange?.(trimmedValue);
             }
             setIsAddingNew(false);
             setNewValue("");
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              if (newValue.trim()) {
-                onAddNew?.(newValue.trim());
+              e.preventDefault();
+              const trimmedValue = newValue.trim();
+              if (trimmedValue) {
+                onAddNew?.(trimmedValue);
+                onChange?.(trimmedValue);
               }
               setIsAddingNew(false);
               setNewValue("");

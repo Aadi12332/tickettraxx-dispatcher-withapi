@@ -5,16 +5,21 @@ interface DriverTooltipProps {
   onRowClicked: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  drivers?: Array<{
+    name?: string;
+    truckId?: string | null;
+    truckUnitNumber?: string | null;
+  }>;
 }
 
-const DriverTooltip = ({ onClose, onRowClicked, onMouseEnter, onMouseLeave }: DriverTooltipProps) => {
-  const drivers = [
-    { name: "Joseph Martin", truckId: "TX4452" },
-    { name: "David Hudson", truckId: "TX453" },
-    { name: "Steve John", truckId: "TX454" },
-    { name: "James Harry", truckId: "TX455" },
-    { name: "Carter Donin", truckId: "TX456" },
-  ];
+const DriverTooltip = ({
+  onClose,
+  onRowClicked,
+  onMouseEnter,
+  onMouseLeave,
+  drivers = [],
+}: DriverTooltipProps) => {
+  const driverRows = drivers.filter((driver) => driver?.name);
 
   return (
     <div   onMouseEnter={onMouseEnter}
@@ -36,18 +41,24 @@ const DriverTooltip = ({ onClose, onRowClicked, onMouseEnter, onMouseLeave }: Dr
         </span>
       </div>
       <div className="max-h-[180px] overflow-y-auto">
-        {drivers.map((driver) => (
-          <div
-            key={driver.truckId}
-            onClick={onRowClicked}
-            className="grid grid-cols-2 px-2 py-2 border-b border-gray-100 text-[10px] cursor-pointer"
-          >
-            <span>{driver.name}</span>
-            <span className="flex items-center justify-end font-medium mr-2">
-              {driver.truckId}
-            </span>
+        {driverRows.length === 0 ? (
+          <div className="px-2 py-3 text-[10px] text-gray-500">
+            No drivers available
           </div>
-        ))}
+        ) : (
+          driverRows.map((driver, index) => (
+            <div
+              key={`${driver.name}-${driver.truckId ?? index}`}
+              onClick={onRowClicked}
+              className="grid grid-cols-2 px-2 py-2 border-b border-gray-100 text-[10px] cursor-pointer"
+            >
+              <span>{driver.name}</span>
+              <span className="flex items-center justify-end font-medium mr-2">
+                {driver.truckUnitNumber ?? driver.truckId ?? "-"}
+              </span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

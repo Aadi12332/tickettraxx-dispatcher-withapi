@@ -320,7 +320,11 @@ export interface CreateSitePayload {
   type: SiteType;
   name: string;
   customerId: string;
+  contractorId?: string;
+  thirdPartyCustomerId?: string;
   address?: string;
+  lat?: number;
+  lng?: number;
   contractorRate: number;
   invoiceRate: number;
 }
@@ -329,7 +333,11 @@ export interface UpdateSitePayload {
   type?: SiteType;
   name?: string;
   customerId?: string;
+  contractorId?: string;
+  thirdPartyCustomerId?: string;
   address?: string;
+  lat?: number;
+  lng?: number;
   contractorRate?: number;
   invoiceRate?: number;
 }

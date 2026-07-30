@@ -25,6 +25,7 @@ interface EditDispatchModalProps {
   onOpenPickupModal?: () => void;
   onSuccess?: () => void;
   dispatchId?: string | null;
+  loadDispatches?:any
 }
 
 const initialFormData = {
@@ -65,12 +66,13 @@ const EditDispatchModal = ({
   onOpenPickupModal,
   onSuccess,
   dispatchId: editDispatchId,
+  loadDispatches
 }: EditDispatchModalProps) => {
   const [columns, setColumns] = useState<number[]>(isEdit ? [1] : []);
   const [formData, setFormData] = useState(initialFormData);
   const [openPickupModal, setOpenPickupModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-const loadsRef = useRef<HTMLInputElement>(null);
+  const loadsRef = useRef<HTMLInputElement>(null);
   // Dispatch that gets created the moment a date is picked
   const [dispatchId, setDispatchId] = useState<string | null>(null);
   const [creatingDispatch, setCreatingDispatch] = useState(false);
@@ -82,8 +84,8 @@ const loadsRef = useRef<HTMLInputElement>(null);
   const [materials, setMaterials] = useState<any[]>([]);
 
   const [optionsLoading, setOptionsLoading] = useState(false);
-const [pickupSites, setPickupSites] = useState<any[]>([]);
-const [deliverySites, setDeliverySites] = useState<any[]>([]);
+  const [pickupSites, setPickupSites] = useState<any[]>([]);
+  const [deliverySites, setDeliverySites] = useState<any[]>([]);
   const navigate = useNavigate();
 
   const loadDispatch = async (dispatchId: string) => {
@@ -105,7 +107,7 @@ const [deliverySites, setDeliverySites] = useState<any[]>([]);
       endTime: load.endTime,
       comment: load.comment ?? "",
     });
-setDispatchId(load.dispatchId);
+    setDispatchId(load.dispatchId);
     setColumns([1]);
   };
 
@@ -129,32 +131,34 @@ setDispatchId(load.dispatchId);
   useEffect(() => {
     if (!open) return;
 
-    const loadOptions = async () => {
-      setOptionsLoading(true);
-      try {
-      const [jobsRes, materialsRes, pickupRes, deliverRes] =
-  await Promise.all([
-    getJobsApi(1, 100),
-    getMaterialsApi(1, 100),
-    siteService.getSites({ type: "pickup", limit: 100 }),
-    siteService.getSites({ type: "deliver", limit: 100 }),
-  ]);
+const loadOptions = async () => {
+  setOptionsLoading(true);
 
-        setJobs(jobsRes.data);
-        setMaterials(materialsRes.data);
+  try {
+    const [jobsRes, materialsRes, sitesRes] = await Promise.all([
+      getJobsApi(1, 100),
+      getMaterialsApi(1, 100),
+      siteService.getSites({ limit: 100 }),
+    ]);
 
-        const map: Record<string, string> = {};
-        [...pickupRes.data, ...deliverRes.data].forEach((site) => {
-          map[site._id] = site.name;
-        });
-        setPickupSites(pickupRes.data);
-setDeliverySites(deliverRes.data);
-      } catch (err) {
-        console.error("Failed to load dispatch options:", err);
-      } finally {
-        setOptionsLoading(false);
-      }
-    };
+    setJobs(jobsRes.data);
+    setMaterials(materialsRes.data);
+
+    const sites = sitesRes.data ?? [];
+
+    setPickupSites(
+      sites.filter((site: any) => site.type === "pickup")
+    );
+
+    setDeliverySites(
+      sites.filter((site: any) => site.type === "deliver")
+    );
+  } catch (err) {
+    console.error("Failed to load dispatch options:", err);
+  } finally {
+    setOptionsLoading(false);
+  }
+};
 
     loadOptions();
   }, [open]);
@@ -194,6 +198,7 @@ setDeliverySites(deliverRes.data);
     try {
       const res = await createDispatchApi({ date: value });
       setDispatchId(res.data._id);
+      loadDispatches?.()
       setColumns([1]);
     } catch (err) {
       console.error("Failed to create dispatch:", err);
@@ -202,6 +207,8 @@ setDeliverySites(deliverRes.data);
       );
       setDispatchId(null);
       setColumns([]);
+      loadDispatches?.()
+
     } finally {
       setCreatingDispatch(false);
     }
@@ -263,40 +270,40 @@ setDeliverySites(deliverRes.data);
   }, [jobs, materials, formData.poCode]);
 
   const pickupOptions = useMemo(
-  () =>
-    pickupSites.map((site) => ({
-      label: site.name,
-      value: site._id,
-    })),
-  [pickupSites],
-);
+    () =>
+      pickupSites.map((site) => ({
+        label: site.name,
+        value: site._id,
+      })),
+    [pickupSites],
+  );
 
-const deliveryOptions = useMemo(
-  () =>
-    deliverySites.map((site) => ({
-      label: site.name,
-      value: site._id,
-    })),
-  [deliverySites],
-);
+  const deliveryOptions = useMemo(
+    () =>
+      deliverySites.map((site) => ({
+        label: site.name,
+        value: site._id,
+      })),
+    [deliverySites],
+  );
 
   const handleSubmit = async () => {
     const loads = Number(formData.loads);
 
-if (!formData.loads || loads <= 0) {
-  setErrors({ loads: true });
+    if (!formData.loads || loads <= 0) {
+      setErrors({ loads: true });
 
-  setTimeout(() => {
-    loadsRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
+      setTimeout(() => {
+        loadsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
 
-    loadsRef.current?.focus();
-  }, 0);
+        loadsRef.current?.focus();
+      }, 0);
 
-  return;
-}
+      return;
+    }
 
     setErrors({
       loads: false,
@@ -327,6 +334,8 @@ if (!formData.loads || loads <= 0) {
     setSubmitting(true);
     try {
       await createLoadApi(payload);
+      loadDispatches?.()
+
       onSuccess?.();
       handleClose();
     } catch (err) {
@@ -353,7 +362,7 @@ if (!formData.loads || loads <= 0) {
     formData.poCode.trim() !== "" &&
     formData.material.trim() !== "" &&
     formData.loads.trim() !== "" &&
-Number(formData.loads) >= 1 &&
+    Number(formData.loads) >= 1 &&
     formData.invoiceRate.trim() !== "" &&
     formData.contractorRate.trim() !== "" &&
     formData.pickup.trim() !== "" &&
@@ -362,10 +371,8 @@ Number(formData.loads) >= 1 &&
     formData.endTime.trim() !== "" &&
     columns.length > 0;
 
-const disableActions =
-  !isFormValid ||
-  Number(formData.loads) <= 0 ||
-  submitting;
+  const disableActions =
+    !isFormValid || Number(formData.loads) <= 0 || submitting;
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -445,7 +452,7 @@ const disableActions =
                   />
 
                   <CommonTextInput
-                  ref={loadsRef}
+                    ref={loadsRef}
                     label="Number of Loads"
                     value={formData.loads}
                     onChange={handleChange("loads")}

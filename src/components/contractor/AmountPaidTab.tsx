@@ -121,7 +121,9 @@ const filteredData = useMemo(() => {
         </div>
       </div>
 
-      <Table data={filteredData} columns={amountPaidColumns} isCheckbox={false} minWidth="min-w-[800px]" />
+      <div className="p-4">
+        <Table data={filteredData} columns={amountPaidColumns} isCheckbox={false} minWidth="min-w-[800px]" />
+      </div>
     </div>
   );
 };

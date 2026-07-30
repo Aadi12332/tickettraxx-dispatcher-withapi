@@ -226,7 +226,12 @@ console.log({cardsLoading, assignmentCards, matrixData, footer, rowData, origina
                     onRowClicked={() => {}}
                     customHeight="h-[calc(100vh-95px)]"
                     enableColumnResize={false}
-                    jobHeaders={matrixData?.columns?.map((x: any) => x.poCode) || []}
+                    jobHeaders={
+                      matrixData?.columns?.map((x: any) => ({
+                        id: x.id,
+                        poCode: x.poCode,
+                      })) || []
+                    }
         footer={matrixData?.footer}
         matrixData={matrixData}
                   />

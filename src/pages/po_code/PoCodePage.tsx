@@ -189,22 +189,7 @@ thirdPartyCustomer:
       >
         {" "}
         <div className="flex flex-wrap items-center gap-[0.6vw] ml-auto">
-          <div className="relative">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]"
-            />
-
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search"
-              className="max-w-xs 2xl:max-w-none 2xl:w-[230px] h-[36px] border border-[#E4E7EC] rounded-[5px] bg-white pl-8 pr-4 outline-none text-xs 2xl:text-sm"
-            />
-          </div>
-
-          {/* Create Button */}
-          <CommonButton
+              <CommonButton
             onClick={() => setOpenModal(true)}
             variant="primary"
             size="xs"
@@ -231,6 +216,23 @@ thirdPartyCustomer:
         </div>
       </PageHeader>
 
+<div className="p-4 bg-white">
+             
+
+           <div className="relative mb-5">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]"
+            />
+
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search"
+              className="max-w-xs 2xl:max-w-none xl:w-[230px] h-[36px] border border-[#E4E7EC] rounded-[5px] bg-white pl-8 pr-4 outline-none text-xs 2xl:text-sm"
+            />
+          </div>
+
       <Table
         columns={columns}
         data={filteredData}
@@ -239,6 +241,7 @@ thirdPartyCustomer:
         minWidth="min-w-[1100px]"
         // loading={loading}
       />
+</div>
 
       <CreatePOCodeModal
         open={openModal}

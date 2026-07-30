@@ -47,7 +47,7 @@ type ContractorRow = Contractor & {
 const mapContractorToRow = (item: Contractor): ContractorRow => ({
   ...item,
   id: item._id,
-  driverName: item?.primaryDriverName??"",
+  driverName: item?.primaryDriverName ?? "",
   contractor: item.companyName,
   phone: item.phone || "-",
   status: item.status === "active" ? "Active" : "Inactive",
@@ -59,14 +59,12 @@ const ContractorsPage = () => {
   const [openCreateContractorModal, setOpenCreateContractorModal] =
     useState(false);
   const [editContractorModalOpen, setEditContractorModalOpen] = useState(false);
-  const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(
-    null
-  );
-  const [filter, setFilter] = useState("");
+  const [selectedContractor, setSelectedContractor] =
+    useState<Contractor | null>(null);
   const [selectedDate, setSelectedDate] = useState<
     [Dayjs | null, Dayjs | null]
   >([null, null]);
-
+const [filter, setFilter] = useState("all");
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -79,10 +77,13 @@ const ContractorsPage = () => {
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successTitle, setSuccessTitle] = useState(
-    "You have successfully loaded the contractors."
+    "You have successfully loaded the contractors.",
   );
 
-  const fetchContractors = async (page = pagination.page, limit = pagination.limit) => {
+  const fetchContractors = async (
+    page = pagination.page,
+    limit = pagination.limit,
+  ) => {
     setLoading(true);
     setError("");
     try {
@@ -155,7 +156,10 @@ const ContractorsPage = () => {
 
   const navigate = useNavigate();
 
-  const rows = useMemo(() => contractors.map(mapContractorToRow), [contractors]);
+  const rows = useMemo(
+    () => contractors.map(mapContractorToRow),
+    [contractors],
+  );
 
   const filteredData = useMemo(() => {
     let filtered = [...rows];
@@ -193,13 +197,14 @@ const ContractorsPage = () => {
     }
 
     // Period dropdown filter (30/90/180/365 days)
-    if (filter) {
-      const days = Number(filter);
-      filtered = filtered.filter((item) => {
-        const itemDate = dayjs(item.createdAt);
-        return itemDate.isAfter(dayjs().subtract(days, "day"));
-      });
-    }
+if (filter !== "all") {
+  const days = Number(filter);
+
+  filtered = filtered.filter((item) => {
+    const itemDate = dayjs(item.createdAt);
+    return itemDate.isAfter(dayjs().subtract(days, "day"));
+  });
+}
 
     return filtered;
   }, [rows, search, filter, selectedDate]);
@@ -251,25 +256,12 @@ const ContractorsPage = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Contractors"
         description="Create, edit and deactivate subcontractors"
       >
         <div className="flex flex-wrap md:flex-nowrap items-center gap-2 ml-auto">
-          <CommonSearchInput
-            placeholder="Search"
-            size="md"
-            value={search}
-            onChange={setSearch}
-          />
-          <button
-            onClick={() => setOpenCalendarModal(true)}
-            className="bg-white border border-(--border-gray-2) rounded-[5px] h-[36px] px-2 xl:px-4 py-1 xl:py-2 flex items-center gap-3 cursor-pointer w-fit"
-          >
-            <Calendar1 size={16} />
-            <span className="text-sm font-normal">{formatDateRange()}</span>
-          </button>
           <CommonButton
             variant="primary"
             size="xs"
@@ -296,58 +288,79 @@ const ContractorsPage = () => {
         </div>
       </PageHeader>
 
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 xl:gap-3 bg-white p-4">
+        {statsData.map((item, index) => (
+          <StatsCard
+            key={index}
+            title={item.title}
+            value={item.value}
+            icon={item.icon}
+          />
+        ))}
+      </div>
+
       {error && <p className="text-sm text-red-500">{error}</p>}
 
       <div className="">
-        <div className="py-4 pb-0 space-y-4 ">
-          <div className=" bg-white p-1.5">
-            <CommonFilterDropdown
-              size="130px"
-              title="Filter"
-              value={filter}
-              onChange={setFilter}
-              icon={<Funnel size={15} />}
-              options={[
-                { label: "30 Days", value: "30" },
-                { label: "90 Days", value: "90" },
-                { label: "180 Days", value: "180" },
-                { label: "365 Days", value: "365" },
-              ]}
-            />
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 xl:gap-3 mt-4">
-              {statsData.map((item, index) => (
-                <StatsCard
-                  key={index}
-                  title={item.title}
-                  value={item.value}
-                  icon={item.icon}
-                />
-              ))}
+        <div className="space-y-4">
+          <div className=" bg-white p-4">
+            <div className="flex items-center gap-3 flex-wrap mb-5">
+              <CommonSearchInput
+                placeholder="Search"
+                size="md"
+                value={search}
+                onChange={setSearch}
+              />
+              <button
+                onClick={() => setOpenCalendarModal(true)}
+                className="bg-white border border-(--border-gray-2) rounded-[5px] h-[36px] px-2 xl:px-4 py-1 xl:py-2 flex items-center gap-3 cursor-pointer w-fit"
+              >
+                <Calendar1 size={16} />
+                <span className="text-sm font-normal">{formatDateRange()}</span>
+              </button>
+              <CommonFilterDropdown
+                size="130px"
+                title="Filter"
+                value={filter}
+                onChange={setFilter}
+                icon={<Funnel size={15} />}
+                options={[
+                  { label: "All", value: "all" },
+                  { label: "30 Days", value: "30" },
+                  { label: "90 Days", value: "90" },
+                  { label: "180 Days", value: "180" },
+                  { label: "365 Days", value: "365" },
+                ]}
+              />
             </div>
-          </div>
 
-          {loading ? (
-            <p className="text-sm text-[#979797] py-6 text-center">Loading contractors...</p>
-          ) : (
-            <Table
-              columns={columns}
-              data={filteredData}
-              currentPage={pagination.page}
-              totalPages={pagination.pages}
-              totalItems={pagination.total}
-              pageSize={pagination.limit}
-              onPageChange={(page: number) => {
-                fetchContractors(page, pagination.limit);
-              }}
-              onEdit={(item) => {
-                setSelectedContractor(item as ContractorRow);
-                setEditContractorModalOpen(true);
-              }}
-              onDelete={(item) => handleDelete(item as ContractorRow)}
-              onStatusToggle={(item) => handleStatusToggle(item as ContractorRow)}
-              onRowClick={(item) => navigate(`/contractors/view/${item.id}`)}
-            />
-          )}
+            {loading ? (
+              <p className="text-sm text-[#979797] py-6 text-center">
+                Loading contractors...
+              </p>
+            ) : (
+              <Table
+                columns={columns}
+                data={filteredData}
+                currentPage={pagination.page}
+                totalPages={pagination.pages}
+                totalItems={pagination.total}
+                pageSize={pagination.limit}
+                onPageChange={(page: number) => {
+                  fetchContractors(page, pagination.limit);
+                }}
+                onEdit={(item) => {
+                  setSelectedContractor(item as ContractorRow);
+                  setEditContractorModalOpen(true);
+                }}
+                onDelete={(item) => handleDelete(item as ContractorRow)}
+                onStatusToggle={(item) =>
+                  handleStatusToggle(item as ContractorRow)
+                }
+                onRowClick={(item) => navigate(`/contractors/view/${item.id}`)}
+              />
+            )}
+          </div>
         </div>
       </div>
       <CalendarModal

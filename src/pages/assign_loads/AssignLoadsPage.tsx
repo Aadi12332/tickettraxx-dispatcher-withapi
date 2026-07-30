@@ -40,7 +40,10 @@ interface LoadCard {
 }
 
 export const mapMatrixColumnToCard = (item: any): LoadCard => ({
-  driverName: item.customerName,
+  driverName:
+  typeof item.customerName === "object"
+    ? item.customerName?.name
+    : item.customerName,
   delivery: item.delivery,
   loads: item.loads,
   rate: item.rate,
@@ -130,6 +133,14 @@ const weekDays = useMemo(() => {
         _rowKey: row.driverId ?? row.id ?? `row-${idx}`,
         driver: row.driver,
         truckId: row.truckId,
+        drivers: Array.isArray(row.drivers)
+          ? row.drivers.map((driver: any) => ({
+              id: driver.id,
+              name: driver.name,
+              truckId: driver.truckId,
+              truckUnitNumber: driver.truckUnitNumber,
+            }))
+          : [],
         tonnage: row.tonnage,
         total: row.total,
         status: row.status,
@@ -140,10 +151,11 @@ const weekDays = useMemo(() => {
           const column = res.data?.data?.columns.find(
             (c: any) => c.id === job.id,
           );
+          console.log(column,"======")
 
           return {
             ...job,
-            id: column?.poCode ?? job.id,
+            id: column?.id ?? job.id,
           };
         }),
       }));
@@ -442,7 +454,10 @@ const weekDays = useMemo(() => {
                   }}
                   customHeight="h-[calc(100vh-170px)]"
                   jobHeaders={
-                    matrixData?.columns?.map((x: any) => x.poCode) || []
+                    matrixData?.columns?.map((x: any) => ({
+                      id: x.id,
+                      poCode: x.poCode,
+                    })) || []
                   }
                   footer={footer}
                   matrixData={matrixData}
@@ -486,7 +501,12 @@ const weekDays = useMemo(() => {
             setShowSuccessModal(false);
           }, 3000);
         }}
-        jobHeaders={matrixData?.columns?.map((x: any) => x.poCode) || []}
+        jobHeaders={
+          matrixData?.columns?.map((x: any) => ({
+            id: x.id,
+            poCode: x.poCode,
+          })) || []
+        }
         footer={footer}
         matrixData={matrixData}
       />

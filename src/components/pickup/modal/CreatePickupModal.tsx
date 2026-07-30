@@ -15,7 +15,7 @@ import {
   pickupOptions,
   deliveryOptions,
 } from "../../../utils/data";
-import type { Site } from "../../../types/auth.types";
+import type { Site, SiteType } from "../../../types/auth.types";
 import { siteService, getContractorsApi } from "../../../services/auth.service";
 
 interface OptionType {
@@ -188,26 +188,29 @@ console.log(newThirdPartyCustomer)
     setSubmitting(true);
     setSubmitError("");
 
-    const siteType =
-      formData.type.toLowerCase() === "pickup" ? "pickup" : "deliver";
+const siteType: SiteType =
+  formData.type.toLowerCase() === "pickup"
+    ? "pickup"
+    : "deliver";
 
     try {
+      const basePayload = {
+        type: siteType,
+        name: formData.location,
+        customerId: formData.customer || "",
+        contractorId: formData.customer || undefined,
+        thirdPartyCustomerId: formData.thirdPartyCustomer || undefined,
+        address: formData.location,
+        lat: markerPos[0],
+        lng: markerPos[1],
+        contractorRate: Number(formData.contractorRate) || 0,
+        invoiceRate: Number(formData.invoiceRate) || 0,
+      };
+
       if (isEdit && editingSite) {
-        await siteService.updateSite(editingSite._id, {
-          type: siteType,
-          name: formData.location,
-          customerId: formData.customer,
-          contractorRate: Number(formData.contractorRate) || undefined,
-          invoiceRate: Number(formData.invoiceRate) || undefined,
-        });
+        await siteService.updateSite(editingSite._id, basePayload);
       } else {
-        await siteService.createSite({
-          type: siteType,
-          name: formData.location,
-          customerId: formData.customer,
-          contractorRate: Number(formData.contractorRate) || 0,
-          invoiceRate: Number(formData.invoiceRate) || 0,
-        });
+        await siteService.createSite(basePayload);
       }
 
       onSuccess?.();

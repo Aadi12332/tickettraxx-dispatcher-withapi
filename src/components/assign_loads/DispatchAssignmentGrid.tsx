@@ -1,10 +1,4 @@
-import {
-  useMemo,
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-} from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { AgGridProvider, AgGridReact } from "ag-grid-react";
 
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
@@ -30,13 +24,30 @@ const LOAD_COLOR_MAP: Record<number, string> = {
   5: "#15803D", // dark green
 };
 
+const normalizeJobId = (value: any) => {
+  if (value == null) return "";
+
+  if (typeof value === "object") {
+    return value.id ?? value._id ?? value.poCode ?? value.value ?? "";
+  }
+
+  return String(value);
+};
+
+const getJobHeaderId = (job: any) => {
+  if (typeof job === "string") return job;
+  return job?.id ?? job?.poCode ?? "";
+};
+
 const JobCell = (
   params: ICellRendererParams & { occurrencesBefore?: number; jobId?: string },
 ) => {
   const isButtonEnabled = params.context.buttonStatus;
 
   const value =
-    typeof params.value === "object" ? params.value?.loads : params.value;
+    typeof params.value === "object"
+      ? (params.value?.loads ?? "")
+      : (params.value ?? "");
 
   if (value === undefined || value === null) return null;
 
@@ -46,8 +57,9 @@ const JobCell = (
   // Current job entry (jaisa pehle matchingJobs se nikala jata tha)
   let currentJob: any = null;
   if (!isSummaryRow && params.data?.jobs && params.jobId) {
+    const targetJobId = normalizeJobId(params.jobId);
     const matchingJobs = params.data.jobs.filter(
-      (j: any) => j.id === params.jobId,
+      (j: any) => normalizeJobId(j.id) === targetJobId,
     );
     currentJob = matchingJobs[params.occurrencesBefore || 0];
   }
@@ -61,7 +73,7 @@ const JobCell = (
     );
     if (originalRow) {
       const origMatchingJobs = (originalRow.jobs || []).filter(
-        (j: any) => j.id === params.jobId,
+        (j: any) => normalizeJobId(j.id) === normalizeJobId(params.jobId),
       );
       const originalValue =
         origMatchingJobs[params.occurrencesBefore || 0]?.loads ?? "";
@@ -111,25 +123,25 @@ const JobCell = (
           fontWeight: isBold ? 600 : undefined,
         }}
       >
-        {params.value}
+        {value}
       </span>
 
-      {!isSummaryRow && Number(params.value) > 0 && (
-  <div
-    className="flex items-center justify-center"
-    onMouseDown={(e) => e.stopPropagation()}
-  >
-    <XCircle
-      size={12}
-      className="cursor-pointer text-red-500"
-      onMouseDown={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        params.context.openCancelDrawer();
-      }}
-    />
-  </div>
-)}
+      {!isSummaryRow && numericValue > 0 && (
+        <div
+          className="flex items-center justify-center"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <XCircle
+            size={12}
+            className="cursor-pointer text-red-500"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              params.context.openCancelDrawer();
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -166,9 +178,9 @@ const JobCell = (
 //   );
 // };
 const DriverRenderer = (props: any) => {
-  // const truckId = props.data?.truckId;
   const canOpenTooltip =
-    Array.isArray(props.data?.truckId) && props.data.truckId.length > 1;
+    (Array.isArray(props.data?.drivers) && props.data.drivers.length > 0) ||
+    (Array.isArray(props.data?.truckId) && props.data.truckId.length > 1);
 
   return (
     <button
@@ -178,6 +190,7 @@ const DriverRenderer = (props: any) => {
         props.context.openDriverPopup(
           e.currentTarget.getBoundingClientRect(),
           props.value,
+          props.data?.drivers || [],
         );
       }}
       onMouseLeave={() => {
@@ -220,13 +233,13 @@ const DispatchAssignmentGrid = ({
   const pinnedBottomRowData = useMemo(() => {
     if (!jobHeaders) return [];
 
-    const totalJobs = jobHeaders.map((job: string, index: number) => ({
-      id: job,
+    const totalJobs = jobHeaders.map((job: any, index: number) => ({
+      id: getJobHeaderId(job),
       loads: matrixData?.columns?.[index]?.totalAssigned ?? 0,
     }));
 
-    const remainingJobs = jobHeaders.map((job: string, index: number) => ({
-      id: job,
+    const remainingJobs = jobHeaders.map((job: any, index: number) => ({
+      id: getJobHeaderId(job),
       loads: matrixData?.columns?.[index]?.remaining ?? 0,
     }));
 
@@ -386,11 +399,27 @@ const DispatchAssignmentGrid = ({
         headerClass: "blue-header",
 
         valueGetter: (params) => {
+          const drivers = params.data?.drivers;
+
+          // Contractor row
+          if (Array.isArray(drivers) && drivers.length > 0) {
+            const truckUnits = drivers
+              .map((d: any) => d.truckUnitNumber)
+              .filter(Boolean);
+
+            if (!truckUnits.length) return "-";
+
+            return truckUnits.length === 1
+              ? truckUnits[0]
+              : `${truckUnits[0]} to ${truckUnits[truckUnits.length - 1]}`;
+          }
+
+          // Driver row (old logic)
           const truckIds = params.data?.truckId ?? [];
-          console.log({ truckIds });
+
           if (!Array.isArray(truckIds)) return truckIds;
 
-          return truckIds?.length > 0
+          return truckIds.length > 0
             ? truckIds.length === 1
               ? truckIds[0]
               : `${truckIds[0]} to ${truckIds[truckIds.length - 1]}`
@@ -425,23 +454,26 @@ const DispatchAssignmentGrid = ({
           </Tooltip>
         ),
       },
-      ...(jobHeaders ?? []).map((job: string, index: number) => {
+      ...(jobHeaders ?? []).map((job: any, index: number) => {
+        const jobHeaderId = getJobHeaderId(job);
+        console.log({ job });
         const occurrencesBefore = jobHeaders
           .slice(0, index)
-          .filter((h: any) => h === job).length;
-
+          .filter((h: any) => getJobHeaderId(h) === jobHeaderId).length;
         const getCurrentJobEntry = (data: any) => {
           if (!data?.jobs) return null;
-          const matchingJobs = data.jobs.filter((j: any) => j.id === job);
+          const targetJobId = normalizeJobId(jobHeaderId);
+          const matchingJobs = data.jobs.filter(
+            (j: any) => normalizeJobId(j.id) === targetJobId,
+          );
           return matchingJobs[occurrencesBefore] ?? null;
         };
-
         return {
-          headerName: `#${job}`,
+          headerName: `#${jobHeaderId}`,
           field: `jobs.${index}`,
           headerComponent: () => {
             const column = matrixData?.columns?.find(
-              (x: any) => x.poCode === job,
+              (x: any) => x.id === jobHeaderId,
             );
 
             const location = column?.location ?? "";
@@ -451,7 +483,7 @@ const DispatchAssignmentGrid = ({
                 title={
                   <div className="flex flex-col items-center">
                     <span className="font-semibold text-[10px]">
-                      Job ID #{job}
+                      Job ID #{job?.poCode}
                     </span>
                     <span className="text-[9px] font-normal">{location}</span>
                   </div>
@@ -478,7 +510,7 @@ const DispatchAssignmentGrid = ({
                 }}
               >
                 <div className="flex flex-col items-center justify-center leading-tight py-1 w-full">
-                  <span className="text-xs font-semibold">#{job}</span>
+                  <span className="text-xs font-semibold">#{job?.poCode}</span>
                   <span className="text-[10px] text-[#666] font-normal block text-center truncate w-full max-w-full">
                     {location}
                   </span>
@@ -492,7 +524,7 @@ const DispatchAssignmentGrid = ({
           cellRenderer: JobCell,
           cellRendererParams: {
             occurrencesBefore,
-            jobId: matrixData?.columns?.[index]?.poCode,
+            jobId: jobHeaderId,
             contractorId: matrixData?.columns?.[index]?.contractorId,
             dispatchId: matrixData?.columns?.[index]?.dispatchId,
 
@@ -503,12 +535,18 @@ const DispatchAssignmentGrid = ({
           },
           editable: (params: any) => {
             if (!enableColumnResize) return false;
+
             const isSummaryRow =
               params.data?.rowType === "total" ||
               params.data?.rowType === "remaining";
+
             if (isSummaryRow) return false;
 
+            // PO Code nahi hai to edit mat hone do
+            if (!job?.poCode) return false;
+
             const currentJob = getCurrentJobEntry(params.data);
+
             if (currentJob?.iscancelled === true) return false;
 
             return true;
@@ -516,7 +554,7 @@ const DispatchAssignmentGrid = ({
 
           valueGetter: (params: any) => {
             const matchingJobs = (params.data.jobs || []).filter(
-              (j: any) => j.id === job,
+              (j: any) => normalizeJobId(j.id) === normalizeJobId(jobHeaderId),
             );
             return matchingJobs[occurrencesBefore]?.loads ?? "";
           },
@@ -538,7 +576,7 @@ const DispatchAssignmentGrid = ({
             }
             let matchCount = 0;
             const targetIndex = (params.data.jobs || []).findIndex((j: any) => {
-              if (j.id === job) {
+              if (normalizeJobId(j.id) === normalizeJobId(jobHeaderId)) {
                 if (matchCount === occurrencesBefore) return true;
                 matchCount++;
               }
@@ -551,12 +589,15 @@ const DispatchAssignmentGrid = ({
               jobs[targetIndex] = { ...jobs[targetIndex], loads: finalValue };
             } else {
               jobs = [...(params.data.jobs || [])];
-              let currentCount = jobs.filter((j: any) => j.id === job).length;
+              let currentCount = jobs.filter(
+                (j: any) =>
+                  normalizeJobId(j.id) === normalizeJobId(jobHeaderId),
+              ).length;
               while (currentCount < occurrencesBefore) {
-                jobs.push({ id: job, loads: 0 });
+                jobs.push({ id: jobHeaderId, loads: 0 });
                 currentCount++;
               }
-              jobs.push({ id: job, loads: finalValue, isManual: true });
+              jobs.push({ id: jobHeaderId, loads: finalValue, isManual: true });
             }
 
             setRowData((prev: any[]) =>
@@ -638,17 +679,21 @@ const DispatchAssignmentGrid = ({
 
   const closeTimeoutRef = useRef<number | null>(null);
 
-  const openDriverPopup = useCallback((rect: DOMRect, driver: string) => {
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-    }
+  const openDriverPopup = useCallback(
+    (rect: DOMRect, driver: string, drivers: any[] = []) => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
 
-    setDriverPopup({
-      driver,
-      left: rect.left,
-      top: rect.bottom,
-    });
-  }, []);
+      setDriverPopup({
+        driver,
+        drivers,
+        left: rect.left,
+        top: rect.bottom,
+      });
+    },
+    [],
+  );
 
   const closeDriverPopup = useCallback(() => {
     closeTimeoutRef.current = window.setTimeout(() => {
@@ -706,9 +751,10 @@ const DispatchAssignmentGrid = ({
             rowData={rowData}
             onCellValueChanged={async (params: any) => {
               if (!params.colDef.field?.startsWith("jobs.")) return;
-
               const job = params.data.jobs.find(
-                (i: any) => i.id === params.colDef.cellRendererParams?.jobId,
+                (i: any) =>
+                  normalizeJobId(i.id) ===
+                  normalizeJobId(params.colDef.cellRendererParams?.jobId),
               );
 
               const truckCount = params.data?.truckId?.length || 0;
@@ -793,6 +839,7 @@ const DispatchAssignmentGrid = ({
             }}
             onMouseEnter={keepDriverPopupOpen}
             onMouseLeave={closeDriverPopup}
+            drivers={driverPopup?.drivers || []}
           />
         </div>
       )}

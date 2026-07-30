@@ -1,9 +1,10 @@
 // @ts-nocheck
 import { Modal } from "@mui/material";
 import AssignLoadCard from "../assign_loads/AssignLoadCard";
+import EditDispatchModal from "./modal/EditDispatchModal";
 import collapsed from "../../assets/icons/collapsed.svg";
 import { useAppSelector } from "../../store";
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   selectLoadCards,
   type AssignLoadCardData,
@@ -22,6 +23,7 @@ const mapMatrixColumnToCard = (item: any): AssignLoadCardData => ({
   driverName: item.customerName,
   delivery: item.delivery,
   jobId: item.poCode,
+  dispatchId: item.dispatchId,
   loads: item.loads,
   rate: item.rate,
   contractorRate: item.contractorRate,
@@ -43,6 +45,8 @@ const DispatchDetailsModal = ({
     (state) => state.dispatch.selectedDay,
   );
   const loadCardsRedux = useAppSelector(selectLoadCards);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedDispatchId, setSelectedDispatchId] = useState<string | null>(null);
 
   const activeDay = selectedDay || selectedDayRedux;
   const currentLoadCards = useMemo(() => {
@@ -51,12 +55,13 @@ const DispatchDetailsModal = ({
 
   return (
     <Modal open={open} onClose={onClose}>
+      <>
       <div className="fixed inset-0 bg-black/5 flex items-start justify-center pt-[12dvh]  p-4">
         <div className="w-[96vw] max-w-[1800px] bg-[#F4F5F8] rounded-xl shadow-xl">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 h-[45px] px-6 flex items-center justify-between rounded-t-xl">
             <h2 className="text-lg font-semibold">
-              Dispatch Details for {activeDay || date || "2024-06-03"}
+              Dispatch Details for {activeDay || date || "N/A"}
             </h2>
 
             <button
@@ -82,12 +87,26 @@ const DispatchDetailsModal = ({
                   {...card}
                   expandOnHover={false}
                   onCancelReroute={onCancelReroute}
+                  onEditDispatch={(dispatchId) => {
+                    setSelectedDispatchId(dispatchId ?? null);
+                    setShowEditModal(true);
+                  }}
                 />
               ))}
             </div>
           </div>
         </div>
       </div>
+      <EditDispatchModal
+        open={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedDispatchId(null);
+        }}
+        isEdit={true}
+        dispatchId={selectedDispatchId}
+      />
+      </>
     </Modal>
   );
 };

@@ -103,7 +103,6 @@ const AssignLoadCard = ({
   const showExpanded = !expandOnHover || isHovered;
   const cardContent = (collapsed: boolean) => (
     <>
-      {/* Header */}
       <div
         className={`h-[32px] rounded-lg px-2.5 flex items-center justify-between ${
           headerColor === "yellow" ? "bg-[#FFD966]" : "bg-[#FFAD66]"

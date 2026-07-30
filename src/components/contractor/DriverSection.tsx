@@ -144,7 +144,9 @@ const DriverSection = ({
       {loading ? (
         <p className="text-sm text-[#6B7280] py-6 text-center">Loading drivers...</p>
       ) : (
-        <Table data={filteredDrivers} columns={driverColumns} isCheckbox={false} minWidth="min-w-[600px]" />
+        <div className="p-4">
+          <Table data={filteredDrivers} columns={driverColumns} isCheckbox={false} minWidth="min-w-[600px]" />
+        </div>
       )}
     </div>
   );
