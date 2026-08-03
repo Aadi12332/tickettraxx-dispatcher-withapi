@@ -5,7 +5,6 @@ import { Provider } from "react-redux";
 import { store } from "./store";
 import { router } from "./routes";
 import "./index.css";
-import "leaflet/dist/leaflet.css";
 import { NotificationProvider } from "./hooks/NotificationContext";
 import { AssignLoadProvider } from "./pages/assign_loads/AssignLoadContext";
 import { ToastContainer } from "react-toastify";

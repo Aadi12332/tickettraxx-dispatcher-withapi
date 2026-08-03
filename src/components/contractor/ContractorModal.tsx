@@ -229,7 +229,10 @@ const ContractorModal = ({
         usdot: editData.usdotNumber ?? "",
         txdot: editData.txdotNumber ?? "",
         ownerOperatorOrFleet: editData.ownerOperatorOrFleet ?? "",
-        payPercent: editData.payPercent ?? "",
+        payPercent:
+          editData.payPercent !== undefined && editData.payPercent !== null
+            ? String(editData.payPercent)
+            : "",
         contractFileName: editData.contractDocument?.url ?? "",
         coiFileName: editData.coiDocument?.url ?? "",
 

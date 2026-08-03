@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Calendar1, GripVertical } from "lucide-react";
 import type { Dayjs } from "dayjs";
-import type { LatLngTuple } from "leaflet";
 import DashboardStatCard from "../../components/dashboard/DashboardStatCard";
 import DashboardQuickView from "../../components/dashboard/DashboardQuickView";
 import RevenueChart from "../../components/dashboard/RevenueChart";
@@ -60,6 +59,8 @@ type DriverCardData = {
   location: string;
   rating: number;
 };
+
+type LatLngTuple = [number, number];
 
 type TrackingItem = {
   id: number;
