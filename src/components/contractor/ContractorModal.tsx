@@ -121,12 +121,8 @@ const ContractorModal = ({
   const handleSubmit = async () => {
     setError("");
 
-    if (
-      !form.companyName.trim() ||
-      !form.primaryDriverName.trim() ||
-      !form.email.trim()
-    ) {
-      setError("Please fill company name, driver name and email");
+    if (!isFormValid) {
+      setError("Please complete all fields before submitting.");
       return;
     }
 
@@ -195,6 +191,13 @@ const ContractorModal = ({
     }
   };
 
+  const allowedTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/jpg",
+  ];
+
   useEffect(() => {
     if (!open) return;
 
@@ -243,17 +246,37 @@ const ContractorModal = ({
     setError("");
   }, [open, isEdit, editData]);
 
-  const allowedTypes = [
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/jpg",
-  ];
+  const isFormValid = Boolean(
+    form.companyName.trim() &&
+    form.primaryDriverName.trim() &&
+    form.email.trim() &&
+    form.zipCode.trim() &&
+    form.state.trim() &&
+    form.city.trim() &&
+    form.parkingLocation.trim() &&
+    form.usdot.trim() &&
+    form.txdot.trim() &&
+    form.signatureDate.trim() &&
+    form.expirationDate.trim() &&
+    form.address.trim() &&
+    form.idType.trim() &&
+    form.id.trim() &&
+    form.ownerOperatorOrFleet.trim() &&
+    form.payPercent.trim() &&
+    form.contactName.trim() &&
+    form.unit.trim() &&
+    form.trucks.trim() &&
+    (form.trucks !== "multiple" || form.truckCount.trim()) &&
+    (form.contractFile !== null || form.contractPreview.trim()) &&
+    (form.coiFile !== null || form.coiPreview.trim()) &&
+    form.phoneCode.trim() &&
+    form.phone.trim()
+  );
 
   return (
     <Modal open={open} onClose={handleClose}>
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[9999]">
-        <div className="w-full max-w-[600px] bg-white rounded-[8px] shadow-sm overflow-hidden">
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-9999">
+        <div className="w-full max-w-150 bg-white rounded-lg shadow-sm overflow-hidden">
           {/* Header */}
           <div className="px-3 pt-4 pb-4 flex items-start justify-between">
             <div>
@@ -402,13 +425,13 @@ const ContractorModal = ({
     {form.contractPreview.toLowerCase().endsWith(".pdf") ? (
       <iframe
         src={form.contractPreview}
-        className="w-full h-[100px] rounded border"
+        className="w-full h-25 rounded border"
       />
     ) : (
       <img
         src={form.contractPreview}
         alt="Contract"
-        className="w-full h-[150px] object-cover rounded-lg border"
+        className="w-full h-37.5 object-cover rounded-lg border"
       />
     )}
   </div>
@@ -441,13 +464,13 @@ const ContractorModal = ({
     {form.coiPreview.toLowerCase().endsWith(".pdf") ? (
       <iframe
         src={form.coiPreview}
-        className="w-full h-[100px] rounded border"
+        className="w-full h-25 rounded border"
       />
     ) : (
       <img
         src={form.coiPreview}
         alt="COI"
-        className="w-full h-[150px] object-cover rounded-lg border"
+        className="w-full h-37.5 object-cover rounded-lg border"
       />
     )}
   </div>
@@ -520,7 +543,7 @@ const ContractorModal = ({
                       address: e.target.value,
                     }))
                   }
-                  className="w-full h-[100px] border-[0.85px] text-sm border-[#E5E7EB] rounded-[8px] p-2 md:p-4 resize-none outline-none"
+                  className="w-full h-25 border-[0.85px] text-sm border-[#E5E7EB] rounded-lg p-2 md:p-4 resize-none outline-none"
                 />
               </div>
 
@@ -674,6 +697,7 @@ const ContractorModal = ({
                 size="md"
                 className="sm:flex-1"
                 onClick={handleSubmit}
+                disabled={!isFormValid || loading}
               >
                 {loading ? "Saving..." : isEdit ? "Save" : "Add Contractor"}
               </CommonButton>

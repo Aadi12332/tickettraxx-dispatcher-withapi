@@ -12,6 +12,7 @@ interface CommonSelectInputProps {
   onChange?: (value: string) => void;
   options: Option[];
   placeholder?: string;
+  selectedLabelOverride?: string;
   addNewLabel?: string;
   addNewMode?: "input" | "modal";
   onAddNew?: (value: string) => void;
@@ -24,6 +25,7 @@ const CommonSelectInput = ({
   onChange,
   options,
   placeholder = "Select one...",
+  selectedLabelOverride,
   addNewLabel,
   addNewMode = "input",
   onAddNew,
@@ -48,8 +50,9 @@ const CommonSelectInput = ({
   }, []);
 
 const selectedOption = options.find((item) => item.value === value);
-
-const selectedLabel = selectedOption ? selectedOption.label : value || "";
+const selectedLabel = selectedOption?.label;
+const displayText =
+  selectedLabelOverride ?? selectedLabel ?? placeholder;
 
   return (
     <div className="w-full" ref={wrapperRef}>
@@ -98,7 +101,7 @@ const selectedLabel = selectedOption ? selectedOption.label : value || "";
           className="w-full h-[40px] border border-[#E5E7EB] rounded-[8px] bg-white px-4 text-sm flex items-center justify-between"
         >
           <span className={value ? "text-black truncate" : "text-[#6B7280]"}>
-            {value ? selectedLabel : placeholder}
+            {displayText}
           </span>
 
           <ChevronDown

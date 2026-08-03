@@ -89,22 +89,23 @@ const DispatchTable = ({
   return (
     <div className="bg-white overflow-hidden">
       <div className="overflow-x-auto border border-(--border-gray-2)">
-        <div className="min-w-[1500px]">
-          <div className="grid grid-cols-[32px_100px_120px_1fr_130px_200px_110px_100px_120px_140px_100px_130px] gap-2 px-5 py-4 border-b border-(--border-gray-2) text-sm font-semibold text-[#111827]">
+        <div className="min-w-[1600px]">
+          <div className="grid grid-cols-[32px_130px_140px_1fr_150px_200px_110px_130px_120px_140px_100px_160px] gap-2 border-b border-(--border-gray-2) text-sm font-semibold text-[#111827]">
             <span />
-            <span>Dispatch ID</span>
-            <span className="flex items-center gap-1">
-              Dispatch Date <ChevronDown size={14} className="text-[#9CA3AF]" />
+            <span className="border-r border-(--border-gray-2) py-3 px-2">Dispatch ID</span>
+            <span className="flex items-center gap-1 border-r border-(--border-gray-2) py-3 px-2">
+              Dispatch Date 
+              {/* <ChevronDown size={14} className="text-[#9CA3AF]" /> */}
             </span>
-            <span>Customer</span>
-            <span>Job ID / PO Code</span>
-            <span className="inline-block px-2">Pickup → Delivery</span>
-            <span>Material</span>
-            <span>Total Loads</span>
-            <span>Invoice Total</span>
-            <span>Contractor Total</span>
-            <span>Status</span>
-            <span>Actions</span>
+            <span className="border-r border-(--border-gray-2) py-3 px-2">Customer</span>
+            <span className="border-r border-(--border-gray-2) py-3 px-2">Job ID / PO Code</span>
+            <span className="inline-block px-2 border-r border-(--border-gray-2) py-3 px-2">Pickup → Delivery</span>
+            <span className="border-r border-(--border-gray-2) py-3 px-2">Material</span>
+            <span className="border-r border-(--border-gray-2) py-3 px-2">Total Loads</span>
+            <span className="border-r border-(--border-gray-2) py-3 px-2">Invoice Total</span>
+            <span className="border-r border-(--border-gray-2) py-3 px-2">Contractor Total</span>
+            <span className="border-r border-(--border-gray-2) py-3 px-2">Status</span>
+            <span className="p-3">Actions</span>
           </div>
 
           {/* Rows */}
@@ -117,34 +118,34 @@ const DispatchTable = ({
                 <div key={row.id}>
                   <div
                     onClick={() => toggleExpand(row.id)}
-                    className="grid grid-cols-[32px_100px_120px_1fr_130px_200px_110px_100px_120px_140px_100px_130px] gap-2 px-5 py-4 items-center text-sm cursor-pointer hover:bg-[#FAFAFA] transition-colors"
+                    className="grid grid-cols-[32px_130px_140px_1fr_150px_200px_110px_130px_120px_140px_100px_160px] gap-2 text-sm cursor-pointer hover:bg-[#FAFAFA] transition-colors"
                   >
-                    <button className="text-[#9CA3AF] cursor-pointer">
-                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    <button className="text-[#9CA3AF] cursor-pointer p-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center">
+                      {isExpanded ? <ChevronDown size={16} className="min-w-4" /> : <ChevronRight size={16}  className="min-w-4" />}
                     </button>
 
-                    <span className="font-semibold text-[#111827]">{dispatchLabel}</span>
-                    <span className="text-[#374151]">
+                    <span className="font-semibold text-[#111827] py-3 px-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center">{dispatchLabel}</span>
+                    <span className="text-[#374151] py-3 px-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center">
                       {new Date(row.date).toLocaleDateString("en-GB")}
                     </span>
-                    <span className="text-[#374151]">{dash(row.customer)}</span>
-                    <span className="text-[#374151]">{dash(row.jobCode)}</span>
-                    <span className="text-[#374151] flex items-center gap-1 px-2">
+                    <span className="text-[#374151] py-3 px-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center">{dash(row.customer)}</span>
+                    <span className="text-[#374151] py-3 px-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center">{dash(row.jobCode)}</span>
+                    <span className="text-[#374151] py-3 px-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center flex items-center gap-1 px-2">
                       <span className="line-clamp-2" title={dash(row.pickup)}>{dash(row.pickup)}</span> <span className="text-[#9CA3AF]">→</span>{" "}
                       <span className="line-clamp-2" title={dash(row.delivery)}>{dash(row.delivery)}</span>
                     </span>
-                    <span className="text-[#374151]">{dash(row.material)}</span>
-                    <span className="text-[#374151]">{row.totalLoads}</span>
-                    <span className="text-[#374151]">{money(row.invoiceTotal)}</span>
-                    <span className="text-[#374151]">{money(row.contractorTotal)}</span>
-                    <span>
+                    <span className="text-[#374151] py-3 px-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center">{dash(row.material)}</span>
+                    <span className="text-[#374151] py-3 px-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center">{row.totalLoads}</span>
+                    <span className="text-[#374151] py-3 px-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center">{money(row.invoiceTotal)}</span>
+                    <span className="text-[#374151] py-3 px-2 border-r border-(--border-gray-2) min-h-[64px] flex items-center">{money(row.contractorTotal)}</span>
+                    <span className="p-3 border-r border-(--border-gray-2) min-h-[64px] flex items-center">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#1D3461] text-white">
                         {row.status}
                       </span>
                     </span>
 
                     <div
-                      className="flex items-center gap-2.5 text-[#374151]"
+                      className="flex items-center gap-2.5 text-[#374151] py-3 px-2 min-h-[64px] flex items-center"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
@@ -192,7 +193,7 @@ const DispatchTable = ({
                   </div>
 
                   {isExpanded && (
-                    <div className="bg-[#FAFBFC] border-t border-(--border-gray-2) px-5 py-4 space-y-4">
+                    <div className="bg-[#FAFBFC] border-t border-(--border-gray-2) px-5 py-4 space-y-4 w-full">
                       {/* Summary strip */}
                       <div className="bg-white border border-(--border-gray-2) rounded-lg px-4 py-3 flex flex-wrap gap-x-8 gap-y-2 text-sm">
                         <span>
@@ -223,7 +224,7 @@ const DispatchTable = ({
 
                       {/* Columns / loads detail */}
                       <div className="bg-white border border-(--border-gray-2) rounded-lg overflow-hidden">
-                        <div className="px-4 py-3 border-b border-(--border-gray-2)">
+                        <div className="px-4 py-3 ">
                           <h4 className="text-sm font-semibold text-[#111827]">
                             Dispatch Columns / Loads Details
                           </h4>
@@ -236,46 +237,46 @@ const DispatchTable = ({
                         ) : (
                           <table className="w-full text-sm">
                             <thead>
-                              <tr className="text-left text-xs font-semibold text-[#111827] border-b border-(--border-gray-2)">
-                                <th className="px-4 py-2">Column</th>
-                                <th className="px-4 py-2">Job ID / PO Code</th>
-                                <th className="px-4 py-2">Customer</th>
-                                <th className="px-4 py-2">Material</th>
-                                <th className="px-4 py-2">Pickup</th>
-                                <th className="px-4 py-2">Delivery</th>
-                                <th className="px-4 py-2">Number of Loads</th>
-                                <th className="px-4 py-2">Invoice Rate</th>
-                                <th className="px-4 py-2">Contractor Rate</th>
-                                <th className="px-4 py-2">Amount (Invoice)</th>
-                                <th className="px-4 py-2">Amount (Contractor)</th>
+                              <tr className="text-left text-xs font-semibold text-[#111827]">
+                                <th className="px-4 py-2 border border-(--border-gray-2) border-l-0">Column</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2)">Job ID / PO Code</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2)">Customer</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2)">Material</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2)">Pickup</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2)">Delivery</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2)">Number of Loads</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2)">Invoice Rate</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2)">Contractor Rate</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2)">Amount (Invoice)</th>
+                                <th className="px-4 py-2 border border-(--border-gray-2) border-r-0">Amount (Contractor)</th>
                               </tr>
                             </thead>
                             <tbody>
                               {row.columns.map((col) => (
                                 <tr
                                   key={col.loadId}
-                                  className="border-b border-(--border-gray-2) last:border-none text-[#374151]"
+                                  className=" text-[#374151]"
                                 >
-                                  <td className="px-4 py-3 whitespace-nowrap">
+                                  <td className="px-4 py-3 whitespace-nowrap border border-(--border-gray-2) border-l-0">
                                     Column {col.column}
                                   </td>
-                                  <td className="px-4 py-3">{dash(col.jobCode)}</td>
-                                  <td className="px-4 py-3">{dash(col.customer)}</td>
-                                  <td className="px-4 py-3">{dash(col.material)}</td>
-                                  <td className="px-4 py-3">{dash(col.pickup)}</td>
-                                  <td className="px-4 py-3">{dash(col.delivery)}</td>
-                                  <td className="px-4 py-3">{col.numberOfLoads}</td>
-                                  <td className="px-4 py-3">{money(col.invoiceRate)}</td>
-                                  <td className="px-4 py-3">{money(col.contractorRate)}</td>
-                                  <td className="px-4 py-3">{money(col.amountInvoice)}</td>
-                                  <td className="px-4 py-3">{money(col.amountContractor)}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2)">{dash(col.jobCode)}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2)">{dash(col.customer)}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2)">{dash(col.material)}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2)">{dash(col.pickup)}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2)">{dash(col.delivery)}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2)">{col.numberOfLoads}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2)">{money(col.invoiceRate)}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2)">{money(col.contractorRate)}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2)">{money(col.amountInvoice)}</td>
+                                  <td className="px-4 py-3 border border-(--border-gray-2) border-r-0">{money(col.amountContractor)}</td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
                         )}
 
-                        <div className="flex flex-wrap justify-end gap-x-8 gap-y-1 px-4 py-3 border-t border-(--border-gray-2) text-sm">
+                        <div className="flex flex-wrap justify-end gap-x-8 gap-y-1 px-4 py-3 text-sm">
                           <span>
                             <span className="font-semibold text-[#111827]">Total Loads:</span>{" "}
                             <span className="text-[#374151]">{row.totalLoads}</span>

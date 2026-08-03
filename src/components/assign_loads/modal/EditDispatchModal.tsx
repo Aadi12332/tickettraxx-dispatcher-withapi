@@ -225,6 +225,18 @@ const loadOptions = async () => {
       const job = jobs.find((j) => j._id === value);
 
       if (job) {
+        const pickupSite =
+          typeof job.pickupSiteId === "object" && job.pickupSiteId
+            ? job.pickupSiteId
+            : null;
+        const deliverySite =
+          typeof job.deliverySiteId === "object" && job.deliverySiteId
+            ? job.deliverySiteId
+            : null;
+
+        if (pickupSite) addSiteOption(pickupSite);
+        if (deliverySite) addSiteOption(deliverySite);
+
         setFormData((prev) => ({
           ...prev,
           poCode: value,
@@ -269,7 +281,7 @@ const loadOptions = async () => {
     }));
   }, [jobs, materials, formData.poCode]);
 
-  const pickupOptions = useMemo(
+    const pickupOptions = useMemo(
     () =>
       pickupSites.map((site) => ({
         label: site.name,
@@ -286,6 +298,50 @@ const loadOptions = async () => {
       })),
     [deliverySites],
   );
+
+  const addSiteOption = (site: any) => {
+    if (!site || !site._id || !site.name || !site.type) return;
+
+    if (site.type === "pickup") {
+      setPickupSites((prev) =>
+        prev.some((item) => item._id === site._id) ? prev : [...prev, site],
+      );
+    }
+
+    if (site.type === "deliver") {
+      setDeliverySites((prev) =>
+        prev.some((item) => item._id === site._id) ? prev : [...prev, site],
+      );
+    }
+  };
+
+  const pickupSelectedLabel = useMemo(() => {
+    if (!formData.pickup) return "";
+    const option = pickupOptions.find((item) => item.value === formData.pickup);
+    if (option) return option.label;
+
+    const job = jobs.find((j) => j._id === formData.poCode);
+    if (job && typeof job.pickupSiteId === "object" && job.pickupSiteId) {
+      return job.pickupSiteId.name;
+    }
+
+    const site = pickupSites.find((item) => item._id === formData.pickup);
+    return site?.name ?? "";
+  }, [formData.pickup, formData.poCode, jobs, pickupOptions, pickupSites]);
+
+  const deliverySelectedLabel = useMemo(() => {
+    if (!formData.deliver) return "";
+    const option = deliveryOptions.find((item) => item.value === formData.deliver);
+    if (option) return option.label;
+
+    const job = jobs.find((j) => j._id === formData.poCode);
+    if (job && typeof job.deliverySiteId === "object" && job.deliverySiteId) {
+      return job.deliverySiteId.name;
+    }
+
+    const site = deliverySites.find((item) => item._id === formData.deliver);
+    return site?.name ?? "";
+  }, [formData.deliver, formData.poCode, jobs, deliveryOptions, deliverySites]);
 
   const handleSubmit = async () => {
     const loads = Number(formData.loads);
@@ -479,6 +535,7 @@ const loadOptions = async () => {
                   <CommonSelectInput
                     label="Pickup"
                     value={formData.pickup}
+                    selectedLabelOverride={pickupSelectedLabel}
                     onChange={handleChange("pickup")}
                     options={pickupOptions}
                     addNewLabel="Add New"
@@ -490,6 +547,7 @@ const loadOptions = async () => {
                   <CommonSelectInput
                     label="Deliver"
                     value={formData.deliver}
+                    selectedLabelOverride={deliverySelectedLabel}
                     onChange={handleChange("deliver")}
                     options={deliveryOptions}
                     addNewLabel="Add New"

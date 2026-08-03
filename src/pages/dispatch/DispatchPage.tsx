@@ -76,6 +76,7 @@ const [selectedDate, setSelectedDate] = useState<[Dayjs | null, Dayjs | null]>([
       if (!statusFilter) return true;
       if (statusFilter === "active") return item.status === "Active";
       if (statusFilter === "close") return item.status === "Closed";
+      if (statusFilter === "we_call") return item.status === "We Call";
       return true;
     })
     .filter((item) => {

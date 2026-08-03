@@ -42,11 +42,13 @@ const CommonButton = ({
   className = "",
   type = "button",
   iconOnly = false,
+  disabled = false,
 }: CommonButtonProps) => {
   return (
     <button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       className={`
         rounded-sm
         flex md:flex-nowrap md:text-nowrap items-center justify-center gap-2
@@ -55,7 +57,8 @@ const CommonButton = ({
         ${variantStyles[variant]}
         ${sizeStyles[size]}
         ${className}
-        ${iconOnly ? "w-[46px] px-0!" : ""}
+        ${iconOnly ? "w-11.5 px-0!" : ""}
+        ${disabled ? "opacity-50 cursor-not-allowed" : ""}
       `}
     >
       {icon && icon}
