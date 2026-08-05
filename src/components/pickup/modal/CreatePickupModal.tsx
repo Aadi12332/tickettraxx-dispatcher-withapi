@@ -30,6 +30,8 @@ const defaultMarkerPos: [number, number] = [49.102, -122.658];
 interface FormData {
   type: string;
   location: string;
+  isCustomLocation: boolean;
+  address: string;
   customer: string;
   contractorRate: string;
   invoiceRate: string;
@@ -39,10 +41,12 @@ interface FormData {
 const initialFormData: FormData = {
   type: "",
   location: "",
+  address: "",
   customer: "",
   contractorRate: "",
   invoiceRate: "",
   thirdPartyCustomer: "",
+  isCustomLocation: false,
 };
 
 const CreatePickupModal = ({
@@ -84,12 +88,12 @@ const CreatePickupModal = ({
           if (status === "OK" && results?.[0]?.formatted_address) {
             setFormData((prev) => ({
               ...prev,
-              location: results[0].formatted_address,
+              address: results[0].formatted_address,
             }));
           } else {
             setFormData((prev) => ({
               ...prev,
-              location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+              address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
             }));
           }
         },
@@ -97,7 +101,7 @@ const CreatePickupModal = ({
     } else {
       setFormData((prev) => ({
         ...prev,
-        location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
       }));
     }
   };
@@ -114,19 +118,19 @@ const CreatePickupModal = ({
     });
 
     if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition((position) => {
-    const current = {
-      lat: position.coords.latitude,
-      lng: position.coords.longitude,
-    };
+      navigator.geolocation.getCurrentPosition((position) => {
+        const current = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
 
-    map.setCenter(current);
+        map.setCenter(current);
 
-    markerInstance.current.setPosition(current);
+        markerInstance.current.setPosition(current);
 
-    setMarkerPos([current.lat, current.lng]);
-  });
-}
+        setMarkerPos([current.lat, current.lng]);
+      });
+    }
 
     mapInstance.current = map;
     markerInstance.current = new google.maps.Marker({
@@ -172,30 +176,29 @@ const CreatePickupModal = ({
       setFormData({
         type: editingSite.type === "pickup" ? "Pickup" : "Deliver",
         location: editingSite.name,
+        address: editingSite.address ?? "",
         customer: editingSite.customerId?._id || "",
         contractorRate: String(editingSite.contractorRate ?? ""),
         invoiceRate: String(editingSite.invoiceRate ?? ""),
         thirdPartyCustomer: "",
+        isCustomLocation: false,
       });
     } else {
       setFormData(initialFormData);
     }
 
     if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      setMarkerPos([
-        position.coords.latitude,
-        position.coords.longitude,
-      ]);
-    },
-    () => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setMarkerPos([position.coords.latitude, position.coords.longitude]);
+        },
+        () => {
+          setMarkerPos(defaultMarkerPos);
+        },
+      );
+    } else {
       setMarkerPos(defaultMarkerPos);
     }
-  );
-} else {
-  setMarkerPos(defaultMarkerPos);
-}
     lastChangeFromMap.current = false;
     setSubmitError("");
   }, [open, isEdit, editingSite]);
@@ -211,8 +214,8 @@ const CreatePickupModal = ({
         if (cancelled) return;
 
         setTimeout(() => {
-  initializeMap(google);
-}, 300);
+          initializeMap(google);
+        }, 300);
 
         if (google?.maps && mapInstance.current) {
           google.maps.event.trigger(mapInstance.current, "resize");
@@ -279,7 +282,13 @@ const CreatePickupModal = ({
             if (requestId !== geocodeRequestId.current) return;
             if (status === "OK" && results?.length > 0) {
               const loc = results[0].geometry.location;
+
               setMarkerPos([loc.lat(), loc.lng()]);
+
+              setFormData((prev) => ({
+                ...prev,
+                address: results[0].formatted_address,
+              }));
             }
           },
         );
@@ -289,22 +298,30 @@ const CreatePickupModal = ({
       });
   }, [formData.location, open]);
 
+  // Type + name (location) hi zaroori hain — customer/rates is form se bhejenge nahi,
+  // isliye unhe required validation se hata diya (pehle button isi wajah se hamesha
+  // disabled rehta tha, kyunki contractorRate/invoiceRate ke liye koi input hi nahi tha)
   const isFormValid = useMemo(
-    () =>
-      !!formData.type &&
-      !!formData.location &&
-      !!formData.customer &&
-      !!formData.contractorRate &&
-      !!formData.invoiceRate,
+    () => !!formData.type && !!formData.location,
     [formData],
   );
 
-  const handleClose = () => {
-    onClose();
-    setFormData(initialFormData);
-    setMarkerPos(defaultMarkerPos);
-    setSubmitError("");
-  };
+const handleClose = () => {
+  onClose();
+
+  mapInstance.current = null;
+  markerInstance.current = null;
+  geocoderInstance.current = null;
+
+  if (mapClickListener.current) {
+    mapClickListener.current.remove();
+    mapClickListener.current = null;
+  }
+
+  setFormData(initialFormData);
+  setMarkerPos(defaultMarkerPos);
+  setSubmitError("");
+};
 
   const handleChange =
     (field: keyof typeof initialFormData) => (value: string) => {
@@ -324,21 +341,22 @@ const CreatePickupModal = ({
       const siteType: SiteType =
         formData.type.toLowerCase() === "pickup" ? "pickup" : "deliver";
 
+      // customerId/contractorRate/invoiceRate is quick-add flow se nahi bhejte —
+      // name = jo type/select kiya, address/lat/lng = map se
       const basePayload = {
         type: siteType,
         name: formData.location,
-        customerId: formData.customer,
+        contractorId: formData.customer || undefined,
         thirdPartyCustomerId: formData.thirdPartyCustomer || undefined,
+        address: formData.address,
         lat: markerPos[0],
         lng: markerPos[1],
-        contractorRate: Number(formData.contractorRate) || 0,
-        invoiceRate: Number(formData.invoiceRate) || 0,
       };
 
       if (isEdit && editingSite) {
-        await siteService.updateSite(editingSite._id, basePayload);
+        await siteService.updateSite(editingSite._id, basePayload as any);
       } else {
-        await siteService.createSite(basePayload);
+        await siteService.createSite(basePayload as any);
       }
 
       onSuccess?.();
@@ -394,7 +412,7 @@ const CreatePickupModal = ({
                 ]}
               />
 
- {formData.type && (
+              {formData.type && !formData.isCustomLocation && (
                 <CommonSelectInput
                   label={formData.type || "Location"}
                   value={formData.location}
@@ -406,23 +424,52 @@ const CreatePickupModal = ({
                       : deliveryOptions
                   }
                   addNewLabel="Add New"
-                  onAddNew={() => {}}
-                />)}
-                  <div>
-                    <label className="block text-sm font-normal text-black mb-3">
-                      GPS Location
-                    </label>
+                  onAddNew={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      isCustomLocation: true,
+                      location: "",
+                    }));
+                  }}
+                />
+              )}
 
-                    <div className="border border-[#E5E7EB] rounded-[12px] overflow-hidden">
-                      <div className="h-[150px]">
-                        <div ref={googleMapRef} className="w-full h-full" />
-                      </div>
-                    </div>
+              {formData.isCustomLocation && (
+                <div>
+                  <label className="block text-sm font-normal text-black mb-3">
+                    {formData.type || "Location"}
+                  </label>
+
+                  <input
+                    className="w-full h-12 rounded-lg border border-[#E5E7EB] px-3"
+                    placeholder="Enter location name"
+                    value={formData.location}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setFormData((prev) => ({
+                        ...prev,
+                        location: value,
+                        isCustomLocation: value.trim().length > 0,
+                      }));
+                    }}
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-normal text-black mb-3">
+                  GPS Location
+                </label>
+
+                <div className="border border-[#E5E7EB] rounded-[12px] overflow-hidden">
+                  <div className="h-[150px]">
+                    <div ref={googleMapRef} className="w-full h-full" />
                   </div>
+                </div>
+              </div>
 
               {formData.type && (
                 <>
-
                   <CommonSelectInput
                     label="Contractor's Name"
                     value={formData.customer}

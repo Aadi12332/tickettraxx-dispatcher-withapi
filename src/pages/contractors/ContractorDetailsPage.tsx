@@ -45,6 +45,8 @@ import {
   deleteContractorApi,
 } from "../../services/auth.service";
 import type { ContractorDetail } from "../../types/auth.types";
+import AssignLoadModal from "./AssignLoadModal";
+import AssignLoadSuccessModal from "./AssignLoadSuccessModal";
 
 const truckTableData = [
   {
@@ -110,7 +112,8 @@ const ContractorDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("overview");
   const [jobSearch, setJobSearch] = useState("");
-
+  const [openAssignModal, setOpenAssignModal] = useState(false);
+  const [openSuccessModal, setOpenSuccessModal] = useState(false);
   const [contractor, setContractor] = useState<ContractorDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -167,35 +170,35 @@ const ContractorDetailsPage = () => {
 
   // Real jobs ho to unhi se cards banao — pickup/deliver/material is response me null hain,
   // isliye wahan "-" dikhta hai (dummy data nahi ghadha)
-const pastJobs = contractor
-  ? contractor.recentJobs.map((job) => ({
-      id: job._id,
-      date: dayjs(job.date).format("DD MMM YYYY"),
+  const pastJobs = contractor
+    ? contractor.recentJobs.map((job) => ({
+        id: job._id,
+        date: dayjs(job.date).format("DD MMM YYYY"),
 
-      customer: job.customerId?.name ?? "-",
+        customer: job.customerId?.name ?? "-",
 
-      route: `${job.pickupSiteId?.name ?? "-"} → ${job.deliverySiteId?.name ?? "-"}`,
+        route: `${job.pickupSiteId?.name ?? "-"} → ${job.deliverySiteId?.name ?? "-"}`,
 
-      material: job.materialId?.name ?? "-",
+        material: job.materialId?.name ?? "-",
 
-      weight: `${job.weightPerTrip ?? 0} tons`,
+        weight: `${job.weightPerTrip ?? 0} tons`,
 
-      truckId:
-        typeof job.truckId === "object"
-          ? job.truckId?.unitNumber ?? "-"
-          : job.truckId ?? "-",
+        truckId:
+          typeof job.truckId === "object"
+            ? (job.truckId?.unitNumber ?? "-")
+            : (job.truckId ?? "-"),
 
-      jobCode: job.jobId?.code ?? "-",
+        jobCode: job.jobId?.code ?? "-",
 
-      contractorRate: job.contractorRate ?? "-",
+        contractorRate: job.contractorRate ?? "-",
 
-      invoiceRate: job.invoiceRate ?? "-",
+        invoiceRate: job.invoiceRate ?? "-",
 
-      status: job.status ?? "-",
+        status: job.status ?? "-",
 
-      dotColor: jobStatusDot(job.status),
-    }))
-  : dummyPastJobs;
+        dotColor: jobStatusDot(job.status),
+      }))
+    : dummyPastJobs;
 
   const filteredPastJobs = pastJobs.filter((job) => {
     const value = jobSearch.toLowerCase();
@@ -452,6 +455,19 @@ const pastJobs = contractor
         </div>
       </div>
 
+      <p
+        className="bg-white rounded-lg shadow-xs px-4 sm:px-6 py-5 flex items-center justify-between gap-3"
+      >
+        Need to assign load to a driver with truck?
+        <CommonButton
+          variant="primary"
+          size="sm"
+          onClick={() => setOpenAssignModal(true)}
+        >
+          Assign Load
+        </CommonButton>
+      </p>
+
       <div className="bg-white rounded-xl shadow-sm border border-[#E8E8E8] overflow-hidden">
         {/* Tab bar */}
         <div className="flex border-b border-[#E8E8E8] overflow-x-auto scrollbar-hide justify-start lg:justify-between flex-wrap">
@@ -513,21 +529,21 @@ const pastJobs = contractor
               </div>
               <div className="p-4">
                 <Table
-                data={
-                  contractor
-                    ? contractor.trucks.map((t) => ({
-                        id: t._id,
-                        truckId: t.unitNumber,
-                        truckName: t.truckName ?? "-",
-                        capacity: "-",
-                        truckStatus: t.operationalStatus,
-                      }))
-                    : truckTableData
-                }
-                columns={truckColumns}
-                isCheckbox={false}
-                minWidth="min-w-[600px]"
-              />
+                  data={
+                    contractor
+                      ? contractor.trucks.map((t) => ({
+                          id: t._id,
+                          truckId: t.unitNumber,
+                          truckName: t.truckName ?? "-",
+                          capacity: "-",
+                          truckStatus: t.operationalStatus,
+                        }))
+                      : truckTableData
+                  }
+                  columns={truckColumns}
+                  isCheckbox={false}
+                  minWidth="min-w-[600px]"
+                />
               </div>
             </div>
 
@@ -581,35 +597,31 @@ const pastJobs = contractor
                       </button>
                     </div>
 
-                   <div className="flex items-center gap-2 mb-2">
-  <span
-    className="w-2.5 h-2.5 rounded-full"
-    style={{ backgroundColor: statusDot[job.dotColor] }}
-  />
-  <p className="text-sm font-bold text-[#1B2D6B]">
-    {job.customer}
-  </p>
-</div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: statusDot[job.dotColor] }}
+                      />
+                      <p className="text-sm font-bold text-[#1B2D6B]">
+                        {job.customer}
+                      </p>
+                    </div>
 
-<p className="text-xs text-[#6B7280]">
-  Route: {job.route}
-</p>
+                    <p className="text-xs text-[#6B7280]">Route: {job.route}</p>
 
-<p className="text-xs text-[#6B7280]">
-  Material: {job.material}
-</p>
+                    <p className="text-xs text-[#6B7280]">
+                      Material: {job.material}
+                    </p>
 
-<p className="text-xs text-[#6B7280]">
-  Weight: {job.weight}
-</p>
+                    <p className="text-xs text-[#6B7280]">
+                      Weight: {job.weight}
+                    </p>
 
-<p className="text-xs text-[#6B7280]">
-  Job: {job.jobCode}
-</p>
+                    <p className="text-xs text-[#6B7280]">Job: {job.jobCode}</p>
 
-<p className="text-xs text-[#6B7280]">
-  Truck ID: {job.truckId}
-</p>
+                    <p className="text-xs text-[#6B7280]">
+                      Truck ID: {job.truckId}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -662,6 +674,21 @@ const pastJobs = contractor
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         title={successTitle}
+      />
+
+      <AssignLoadModal
+        open={openAssignModal}
+        onClose={() => setOpenAssignModal(false)}
+        onAssign={() => {
+          setOpenAssignModal(false);
+
+          setOpenSuccessModal(true);
+        }}
+      />
+
+      <AssignLoadSuccessModal
+        open={openSuccessModal}
+        onClose={() => setOpenSuccessModal(false)}
       />
 
       {openCallModal && (
