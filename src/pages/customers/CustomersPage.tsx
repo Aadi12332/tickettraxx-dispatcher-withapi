@@ -16,12 +16,15 @@ import type { Customer } from "../../types/auth.types";
 
 const customerColumns = [
   { label: "#", key: "id" },
-  { label: "Prefix", key: "prefix" },
   { label: "Name", key: "name" },
+  { label: "Contact Name", key: "contactName" },
+  { label: "Email", key: "email" },
+  { label: "Phone", key: "phone" },
+  { label: "Address", key: "address" },
   { label: "Details", key: "actions" },
 ];
 
-type CustomerRow = Customer & { id: string; name: string; prefix?: string };
+type CustomerRow = Customer & { id: string; name: string; contactName?: string; email?: string; phone?: string; address?: string };
 
 const CustomersPage = () => {
   const [openModal, setOpenModal] = useState(false);
@@ -99,12 +102,22 @@ const CustomersPage = () => {
     ...customer,
     id: (pagination.page - 1) * pagination.limit + index + 1,
     name: customer.name,
-    prefix: customer.code || "",
+    contactName: (customer as any).contactName || "",
+    email: customer.email || "",
+    phone: customer.phone || "",
+    address: customer.address || "",
   }));
 
   const filteredCustomers = rows.filter((item) => {
     if (!search) return true;
-    return item.name.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    return (
+      (item.name || "").toLowerCase().includes(q) ||
+      (item.contactName || "").toLowerCase().includes(q) ||
+      (item.email || "").toLowerCase().includes(q) ||
+      (item.phone || "").toLowerCase().includes(q) ||
+      (item.address || "").toLowerCase().includes(q)
+    );
   });
 
   return (

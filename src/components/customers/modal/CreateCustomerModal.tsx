@@ -28,6 +28,11 @@ const CreateCustomerModal = ({
   onSuccess,
 }: CreateCustomerModalProps) => {
   const [name, setName] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,15 +40,27 @@ const CreateCustomerModal = ({
     if (!open) return;
 
     if (isEdit && editData) {
-      setName(editData.name);
+      setName(editData.name || "");
+      setContactName((editData as any).contactName || "");
+      setEmail(editData.email || "");
+      setPhone(editData.phone || "");
+      setAddress(editData.address || "");
     } else {
       setName(initialName);
+      setContactName("");
+      setEmail("");
+      setPhone("");
+      setAddress("");
     }
     setError("");
   }, [open, isEdit, editData]);
 
   const handleClose = () => {
     setName(initialName);
+    setContactName("");
+    setEmail("");
+    setPhone("");
+    setAddress("");
     setError("");
     onClose();
   };
@@ -55,10 +72,18 @@ const CreateCustomerModal = ({
 
     setLoading(true);
     try {
+      const payload = {
+        name: name.trim(),
+        contactName: contactName.trim() || undefined,
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        address: address.trim() || undefined,
+      };
+
       if (isEdit && editData) {
-        await updateCustomerApi(editData._id, { name: name.trim() });
+        await updateCustomerApi(editData._id, payload);
       } else {
-        await createCustomerApi({ name: name.trim() });
+        await createCustomerApi(payload);
       }
 
       onSuccess?.();
@@ -108,6 +133,34 @@ const CreateCustomerModal = ({
                 placeholder="Enter name..."
                 value={name}
                 onChange={setName}
+              />
+
+              <CommonTextInput
+                label="Contact Name"
+                placeholder="Enter contact name..."
+                value={contactName}
+                onChange={setContactName}
+              />
+
+              <CommonTextInput
+                label="Email"
+                placeholder="Enter email..."
+                value={email}
+                onChange={setEmail}
+              />
+
+              <CommonTextInput
+                label="Phone"
+                placeholder="Enter phone..."
+                value={phone}
+                onChange={setPhone}
+              />
+
+              <CommonTextInput
+                label="Address"
+                placeholder="Enter address..."
+                value={address}
+                onChange={setAddress}
               />
             </div>
 
