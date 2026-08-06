@@ -312,7 +312,12 @@ const ContractorModal = ({
 
         contractPreview: editData.contractDocument?.url ?? "",
         coiPreview: editData.coiDocument?.url ?? "",
-        dotInspectionPreview: editData.dotInspectionDocument?.url ?? editData.dotInspection?.url ?? "",
+        dotInspectionPreview:
+          singleTruck?.dotInspectionDocument?.url ??
+          editData.ownerTruck?.dotInspectionDocument?.url ??
+          editData.dotInspectionDocument?.url ??
+          editData.dotInspection?.url ??
+          "",
         truckOwnership: Number(editData.truckCount) > 1 ? "multiple" : "single",
 
         truckCount: editData.truckCount ? String(editData.truckCount) : "",
