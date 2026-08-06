@@ -32,6 +32,7 @@ const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
       error = false,
       rightIcon,
       onRightIconClick,
+      disabled = false,
     },
     ref,
   ) => {
