@@ -207,9 +207,18 @@ export const getCustomersApi = async (
   return data;
 };
 
-export const createCustomerApi = async (name: string) => {
-  const { data } = await axiosInstance.post("/customers", { name });
+export const createCustomerApi = async (payload: { name: string }) => {
+  const { data } = await axiosInstance.post(CUSTOMER_ENDPOINTS.CUSTOMERS, payload);
   return data;
+};
+
+export const updateCustomerApi = async (id: string, payload: { name?: string }) => {
+  const { data } = await axiosInstance.patch(CUSTOMER_ENDPOINTS.CUSTOMER_BY_ID(id), payload);
+  return data;
+};
+
+export const deleteCustomerApi = async (id: string): Promise<void> => {
+  await axiosInstance.delete(CUSTOMER_ENDPOINTS.CUSTOMER_BY_ID(id));
 };
 
 // ---------- FSC ----------

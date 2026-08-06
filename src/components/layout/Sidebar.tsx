@@ -59,6 +59,7 @@ const navItems = [
     activeIcon: materialwhite,
   },
   { name: "FSC", path: "/fsc", icon: fuel, activeIcon: fuelwhite },
+  { name: "Customers", path: "/customers", icon: usersblack, activeIcon: userswhite },
   {
     name: "Contractors",
     path: "/contractors",

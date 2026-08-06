@@ -14,6 +14,7 @@ import POCode from "../pages/po_code/PoCodePage";
 import PickupPage from "../pages/pickup/PickupPage";
 import MaterialsPage from "../pages/materials/MaterialsPage";
 import FscPage from "../pages/fsc/FscPage";
+import CustomersPage from "../pages/customers/CustomersPage";
 import ContractorsPage from "../pages/contractors/ContractorsPage";
 import ContractorDetailsPage from "../pages/contractors/ContractorDetailsPage";
 import AddDriverPage from "../pages/contractors/AddDriverPage";
@@ -105,6 +106,10 @@ export const router = createBrowserRouter([
           {
             path: "fsc",
             element: <FscPage />,
+          },
+          {
+            path: "customers",
+            element: <CustomersPage />,
           },
           {
             path: "contractors",
