@@ -1,4 +1,5 @@
 import { Modal } from "@mui/material";
+import axios from "axios";
 import { X, Plus, Minus } from "lucide-react";
 import CommonTextInput from "../../common/CommonTextInput";
 import CommonSelectInput from "../../common/CommonSelectInput";
@@ -26,7 +27,7 @@ interface EditDispatchModalProps {
   onOpenPickupModal?: () => void;
   onSuccess?: () => void;
   dispatchId?: string | null;
-  loadDispatches?:any
+  loadDispatches?: any;
 }
 
 const initialFormData = {
@@ -67,7 +68,7 @@ const EditDispatchModal = ({
   onOpenPickupModal,
   onSuccess,
   dispatchId: editDispatchId,
-  loadDispatches
+  loadDispatches,
 }: EditDispatchModalProps) => {
   const [columns, setColumns] = useState<number[]>(isEdit ? [1] : []);
   const [formData, setFormData] = useState(initialFormData);
@@ -134,34 +135,30 @@ const EditDispatchModal = ({
   useEffect(() => {
     if (!open) return;
 
-const loadOptions = async () => {
-  setOptionsLoading(true);
+    const loadOptions = async () => {
+      setOptionsLoading(true);
 
-  try {
-    const [jobsRes, materialsRes, sitesRes] = await Promise.all([
-      getJobsApi(1, 100),
-      getMaterialsApi(1, 100),
-      siteService.getSites({ limit: 100 }),
-    ]);
+      try {
+        const [jobsRes, materialsRes, sitesRes] = await Promise.all([
+          getJobsApi(1, 100),
+          getMaterialsApi(1, 100),
+          siteService.getSites({ limit: 100 }),
+        ]);
 
-    setJobs(jobsRes.data);
-    setMaterials(materialsRes.data);
+        setJobs(jobsRes.data);
+        setMaterials(materialsRes.data);
 
-    const sites = sitesRes.data ?? [];
+        const sites = sitesRes.data ?? [];
 
-    setPickupSites(
-      sites.filter((site: any) => site.type === "pickup")
-    );
+        setPickupSites(sites.filter((site: any) => site.type === "pickup"));
 
-    setDeliverySites(
-      sites.filter((site: any) => site.type === "deliver")
-    );
-  } catch (err) {
-    console.error("Failed to load dispatch options:", err);
-  } finally {
-    setOptionsLoading(false);
-  }
-};
+        setDeliverySites(sites.filter((site: any) => site.type === "deliver"));
+      } catch (err) {
+        console.error("Failed to load dispatch options:", err);
+      } finally {
+        setOptionsLoading(false);
+      }
+    };
 
     loadOptions();
   }, [open]);
@@ -201,7 +198,7 @@ const loadOptions = async () => {
     try {
       const res = await createDispatchApi({ date: value });
       setDispatchId(res.data._id);
-      loadDispatches?.()
+      loadDispatches?.();
       setColumns([1]);
     } catch (err) {
       console.error("Failed to create dispatch:", err);
@@ -210,8 +207,7 @@ const loadOptions = async () => {
       );
       setDispatchId(null);
       setColumns([]);
-      loadDispatches?.()
-
+      loadDispatches?.();
     } finally {
       setCreatingDispatch(false);
     }
@@ -284,7 +280,7 @@ const loadOptions = async () => {
     }));
   }, [jobs, materials, formData.poCode]);
 
-    const pickupOptions = useMemo(
+  const pickupOptions = useMemo(
     () =>
       pickupSites.map((site) => ({
         label: site.name,
@@ -334,7 +330,9 @@ const loadOptions = async () => {
 
   const deliverySelectedLabel = useMemo(() => {
     if (!formData.deliver) return "";
-    const option = deliveryOptions.find((item) => item.value === formData.deliver);
+    const option = deliveryOptions.find(
+      (item) => item.value === formData.deliver,
+    );
     if (option) return option.label;
 
     const job = jobs.find((j) => j._id === formData.poCode);
@@ -419,11 +417,20 @@ const loadOptions = async () => {
     } catch (err) {
       // If backend reports assignments exist for columns being removed, show friendly inline error
       if (axios.isAxiosError(err)) {
-        const msg = err.response?.data?.error?.message || err.response?.data?.message || "";
-        if (typeof msg === "string" && (msg.includes("already have an assignment") || msg.includes("Cannot remove column"))) {
-          setDispatchError("unable to update the load due to already assigned load");
+        const msg =
+          err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          "";
+        if (
+          typeof msg === "string" &&
+          (msg.includes("already have an assignment") ||
+            msg.includes("Cannot remove column"))
+        ) {
+          setDispatchError(
+            "This load is already assigned to a driver. Unable to update the number of loads.",
+          );
         } else {
-          setDispatchError("Unable to create/update load");
+          setDispatchError("Unable to update dispatch. Please try again.");
         }
       } else {
         setDispatchError("Unable to create/update load");
@@ -431,6 +438,14 @@ const loadOptions = async () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const showError = (message: string) => {
+    setDispatchError(message);
+
+    setTimeout(() => {
+      setDispatchError("");
+    }, 3000);
   };
 
   const handleAddColumn = () => {
@@ -490,6 +505,21 @@ const loadOptions = async () => {
               <X className="size-5 md:size-6" />
             </button>
           </div>
+          {dispatchError && (
+  <div className="mx-4 mt-3 flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-4 py-3">
+    <p className="text-sm font-medium text-red-600">
+      {dispatchError}
+    </p>
+
+    <button
+      type="button"
+      onClick={() => setDispatchError("")}
+      className="text-red-600 hover:text-red-800"
+    >
+      <X size={18} />
+    </button>
+  </div>
+)}
           <div className="flex-1 overflow-y-auto px-4 xl:px-4 pb-3">
             <div className="mt-6">
               <CommonTextInput
@@ -505,9 +535,6 @@ const loadOptions = async () => {
                 <p className="text-xs text-[#717182] mt-1">
                   Creating dispatch...
                 </p>
-              )}
-              {dispatchError && (
-                <p className="text-xs text-red-500 mt-1">{dispatchError}</p>
               )}
             </div>
 
@@ -646,10 +673,6 @@ const loadOptions = async () => {
             </div>
           </div>
           <div className="shrink-0 border-t border-[#E5E7EB] px-4 xl:px-8 py-4">
-            {/* Inline error shown above action buttons */}
-            {dispatchError && (
-              <p className="text-sm text-red-500 mb-3">{dispatchError}</p>
-            )}
             <div className="flex flex-wrap gap-4">
               <button
                 onClick={handleSubmit}

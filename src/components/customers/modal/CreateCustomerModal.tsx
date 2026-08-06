@@ -104,7 +104,7 @@ const CreateCustomerModal = ({
                 {isEdit ? "Edit Customer" : "Create Customer"}
               </h2>
 
-              <p className="mt-3 text-sm text-[#717182]">
+              <p className="mt-0 text-sm text-[#717182]">
                 Create or update a customer.
               </p>
 
@@ -121,7 +121,13 @@ const CreateCustomerModal = ({
 
           {/* Form */}
           <div className="px-3 pb-4 mt-2">
-            <div className="grid grid-cols-1 gap-6 max-h-[55dvh] overflow-y-auto">
+            <div className="grid grid-cols-1 gap-5">
+              <CommonTextInput
+                label="Code"
+                placeholder="Enter code (e.g., PST)"
+                value={code}
+                onChange={setCode}
+              />
               <CommonTextInput
                 label="Customer Name"
                 placeholder="Enter name..."
@@ -129,16 +135,10 @@ const CreateCustomerModal = ({
                 onChange={setName}
               />
 
-              <CommonTextInput
-                label="Code"
-                placeholder="Enter code (e.g., PST)"
-                value={code}
-                onChange={setCode}
-              />
             </div>
 
             {/* Footer */}
-            <div className="border-t border-[#E5E7EB] mt-8 pt-5 flex justify-center flex-wrap gap-4">
+            <div className="border-t border-[#E5E7EB] mt-4 pt-5 flex justify-center flex-wrap gap-4">
               <CommonButton
                 size="md"
                 variant="primary"

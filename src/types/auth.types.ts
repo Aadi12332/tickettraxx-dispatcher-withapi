@@ -215,6 +215,7 @@ export interface Customer {
   name: string;
   code: string;
   email: string;
+  phone: string | any;
   billingEmail: string;
   thirdPartyCustomerId: string | null;
   status: string;

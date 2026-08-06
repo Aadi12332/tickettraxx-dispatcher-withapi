@@ -30,7 +30,7 @@ interface LoadCard {
   loads: number;
   rate: number;
   contractorRate: number;
-  remaining:number;
+  remaining: number;
   pickup: string;
   material: string;
   time: string;
@@ -41,9 +41,9 @@ interface LoadCard {
 
 export const mapMatrixColumnToCard = (item: any): LoadCard => ({
   driverName:
-  typeof item.customerName === "object"
-    ? item.customerName?.name
-    : item.customerName,
+    typeof item.customerName === "object"
+      ? item.customerName?.name
+      : item.customerName,
   delivery: item.delivery,
   loads: item.loads,
   rate: item.rate,
@@ -73,7 +73,9 @@ const AssignLoadsPage = () => {
   const [openDispatchModal, setOpenDispatchModal] = useState(false);
   const [openGridModal, setOpenGridModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedDispatchId, setSelectedDispatchId] = useState<string | null>(null);
+  const [selectedDispatchId, setSelectedDispatchId] = useState<string | null>(
+    null,
+  );
   const [isLiveTrackingModalOpen, setIsLiveTrackingModalOpen] = useState(false);
   const [buttonStatus] = useState(false);
   const [successModal, setSuccessModal] = useState({
@@ -84,7 +86,7 @@ const AssignLoadsPage = () => {
   console.log(setToastTitle, showSuccessModal);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-const { selectedDate, setSelectedDate } = useAssignLoad();
+  const { selectedDate, setSelectedDate } = useAssignLoad();
   const [matrixData, setMatrixData] = useState<any>(null);
   const [footer, setFooter] = useState<any>(null);
 
@@ -92,23 +94,23 @@ const { selectedDate, setSelectedDate } = useAssignLoad();
     sessionStorage.setItem("assignLoadsDate", selectedDate);
   }, [selectedDate]);
 
-const weekDays = useMemo(() => {
-  const today = new Date();
+  const weekDays = useMemo(() => {
+    const today = new Date();
 
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (6 - index)); // last 6 days + today
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - (6 - index)); // last 6 days + today
 
-    const day = date
-      .toLocaleDateString("en-US", { weekday: "short" })
-      .toUpperCase();
+      const day = date
+        .toLocaleDateString("en-US", { weekday: "short" })
+        .toUpperCase();
 
-    return {
-      label: `${day} ${date.getMonth() + 1}/${date.getDate()}`,
-      value: date.toISOString().split("T")[0],
-    };
-  });
-}, []);
+      return {
+        label: `${day} ${date.getMonth() + 1}/${date.getDate()}`,
+        value: date.toISOString().split("T")[0],
+      };
+    });
+  }, []);
 
   useEffect(() => {
     const selected = weekDays.find((d) => d.value === selectedDate);
@@ -129,36 +131,45 @@ const weekDays = useMemo(() => {
       setFooter(res.data?.footer);
 
       setAssignmentCards(res.data?.data?.columns.map(mapMatrixColumnToCard));
-      const rows = res.data?.data?.rows.map((row: any,idx: number) => ({
-        _rowKey: row.driverId ?? row.id ?? `row-${idx}`,
-        driver: row.driver,
-        truckId: row.truckId,
-        drivers: Array.isArray(row.drivers)
-          ? row.drivers.map((driver: any) => ({
-              id: driver.id,
-              name: driver.name,
-              truckId: driver.truckId,
-              truckUnitNumber: driver.truckUnitNumber,
-            }))
-          : [],
-        tonnage: row.tonnage,
-        total: row.total,
-        status: row.status,
-        weCall: row.weCall,
-        driverId:row.driverId,
-        contractorId:row.contractorId,
-        jobs: row.jobs.map((job: any) => {
-          const column = res.data?.data?.columns.find(
-            (c: any) => c.id === job.id,
-          );
-          console.log(column,"======")
+      const rows = (res.data?.data?.rows ?? [])
+        .filter((row: any) => {
+          // Contractor row hai aur uske paas koi driver nahi hai
+          if (row.rowType === "contractor") {
+            return Array.isArray(row.drivers) && row.drivers.length > 0;
+          }
 
-          return {
-            ...job,
-            id: column?.id ?? job.id,
-          };
-        }),
-      }));
+          // Baaki sab rows show hongi
+          return true;
+        })
+        .map((row: any, idx: number) => ({
+          _rowKey: row.driverId ?? row.id ?? `row-${idx}`,
+          driver: row.driver,
+          truckId: row.truckId,
+          drivers: Array.isArray(row.drivers)
+            ? row.drivers.map((driver: any) => ({
+                id: driver.id,
+                name: driver.name,
+                truckId: driver.truckId,
+                truckUnitNumber: driver.truckUnitNumber,
+              }))
+            : [],
+          tonnage: row.tonnage,
+          total: row.total,
+          status: row.status,
+          weCall: row.weCall,
+          driverId: row.driverId,
+          contractorId: row.contractorId,
+          jobs: row.jobs.map((job: any) => {
+            const column = res.data?.data?.columns.find(
+              (c: any) => c.id === job.id,
+            );
+
+            return {
+              ...job,
+              id: column?.id ?? job.id,
+            };
+          }),
+        }));
 
       dispatch(setRowData(rows));
       dispatch(setOriginalRowData(JSON.parse(JSON.stringify(rows))));
@@ -229,7 +240,9 @@ const weekDays = useMemo(() => {
   }, [assignmentCards]);
 
   const hasCardData = (matrixData?.columns?.length ?? 0) > 0;
-  const hasRowData = (matrixData?.rows?.length ?? 0) > 0 && (matrixData?.columns?.length ?? 0) > 0;
+  const hasRowData =
+    (matrixData?.rows?.length ?? 0) > 0 &&
+    (matrixData?.columns?.length ?? 0) > 0;
   const hasAnyData = hasCardData || hasRowData;
 
   return (
@@ -489,8 +502,8 @@ const weekDays = useMemo(() => {
         onRowClicked={() => setIsLiveTrackingModalOpen(true)}
         buttonStatus={buttonStatus}
         selectedDay={selectedDay}
-           selectedDate={selectedDate}
-                  loadAssignments={loadAssignments}
+        selectedDate={selectedDate}
+        loadAssignments={loadAssignments}
         rowData={rowData}
         setRowData={handleSetRowData}
         originalRowData={originalRowData}
