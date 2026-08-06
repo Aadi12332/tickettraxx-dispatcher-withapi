@@ -14,7 +14,6 @@ import {
   getLoadsByDispatchIdApi,
   updateDispatchColumnsApi,
 } from "../../../services/auth.service";
-import { toast } from "react-toastify";
 import type { Job, CreateLoadPayload } from "../../../types/auth.types";
 import dayjs from "dayjs";
 
@@ -418,18 +417,16 @@ const loadOptions = async () => {
       onSuccess?.();
       handleClose();
     } catch (err) {
-      // If backend reports assignments exist for columns being removed, show friendly toast
+      // If backend reports assignments exist for columns being removed, show friendly inline error
       if (axios.isAxiosError(err)) {
         const msg = err.response?.data?.error?.message || err.response?.data?.message || "";
         if (typeof msg === "string" && (msg.includes("already have an assignment") || msg.includes("Cannot remove column"))) {
-          toast.error("unable to update the load due to already assigned load");
+          setDispatchError("unable to update the load due to already assigned load");
         } else {
-          toast.error("Unable to create/update load");
-          // fallback log for debugging
-          // console.error("Failed to create/update load:", err);
+          setDispatchError("Unable to create/update load");
         }
       } else {
-        toast.error("Unable to create/update load");
+        setDispatchError("Unable to create/update load");
       }
     } finally {
       setSubmitting(false);
@@ -649,6 +646,10 @@ const loadOptions = async () => {
             </div>
           </div>
           <div className="shrink-0 border-t border-[#E5E7EB] px-4 xl:px-8 py-4">
+            {/* Inline error shown above action buttons */}
+            {dispatchError && (
+              <p className="text-sm text-red-500 mb-3">{dispatchError}</p>
+            )}
             <div className="flex flex-wrap gap-4">
               <button
                 onClick={handleSubmit}
