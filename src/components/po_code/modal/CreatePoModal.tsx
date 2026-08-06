@@ -164,7 +164,10 @@ if (
   newThirdPartyName &&
   !thirdPartyOptions.some((o) => o.value === formData.thirdPartyCustomer)
 ) {
-  const res = await createCustomerApi(newThirdPartyName);
+  const res = await createCustomerApi({
+  name: newThirdPartyName,
+  code: "",
+});
 
   await loadCustomers();
 

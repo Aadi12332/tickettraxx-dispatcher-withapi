@@ -440,14 +440,6 @@ const EditDispatchModal = ({
     }
   };
 
-  const showError = (message: string) => {
-    setDispatchError(message);
-
-    setTimeout(() => {
-      setDispatchError("");
-    }, 3000);
-  };
-
   const handleAddColumn = () => {
     if (!dispatchId) return;
     setColumns((prev) => [...prev, prev.length + 1]);
