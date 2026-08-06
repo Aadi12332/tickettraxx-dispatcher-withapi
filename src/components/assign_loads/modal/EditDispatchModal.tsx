@@ -12,6 +12,7 @@ import {
   createDispatchApi,
   siteService,
   getLoadsByDispatchIdApi,
+  updateDispatchColumnsApi,
 } from "../../../services/auth.service";
 import type { Job, CreateLoadPayload } from "../../../types/auth.types";
 import dayjs from "dayjs";
@@ -75,6 +76,7 @@ const EditDispatchModal = ({
   const loadsRef = useRef<HTMLInputElement>(null);
   // Dispatch that gets created the moment a date is picked
   const [dispatchId, setDispatchId] = useState<string | null>(null);
+  const [editingLoadId, setEditingLoadId] = useState<string | null>(null);
   const [creatingDispatch, setCreatingDispatch] = useState(false);
   const [dispatchError, setDispatchError] = useState("");
   const [errors, setErrors] = useState({
@@ -108,6 +110,7 @@ const EditDispatchModal = ({
       comment: load.comment ?? "",
     });
     setDispatchId(load.dispatchId);
+    setEditingLoadId(load._id ?? null);
     setColumns([1]);
   };
 
@@ -389,13 +392,32 @@ const loadOptions = async () => {
 
     setSubmitting(true);
     try {
-      await createLoadApi(payload);
-      loadDispatches?.()
+      if (isEdit && dispatchId) {
+        // Backend expects PUT /api/dispatches/:id/columns with columns array.
+        // If editing existing load, include loadId so backend updates it instead of creating new.
+        const columnsPayload: any[] = [
+          {
+            ...(editingLoadId ? { loadId: editingLoadId } : {}),
+            numberOfTrips: Number(formData.loads) || 0,
+            invoiceRate: parseAmount(formData.invoiceRate),
+            contractorRate: parseAmount(formData.contractorRate),
+            comment: formData.comment || undefined,
+            jobId: formData.poCode || undefined,
+            pickupSiteId: formData.pickup || undefined,
+            deliverySiteId: formData.deliver || undefined,
+          },
+        ];
 
+        await updateDispatchColumnsApi(dispatchId, columnsPayload);
+      } else {
+        await createLoadApi(payload);
+      }
+
+      loadDispatches?.();
       onSuccess?.();
       handleClose();
     } catch (err) {
-      console.error("Failed to create load:", err);
+      console.error("Failed to create/update load:", err);
     } finally {
       setSubmitting(false);
     }

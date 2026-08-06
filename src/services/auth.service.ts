@@ -504,6 +504,18 @@ export const getAssignmentsApi = async (): Promise<AssignmentListResponse> => {
   return data;
 };
 
+// ------- Dispatch columns update -------
+export const updateDispatchColumnsApi = async (
+  dispatchId: string,
+  columns: any[],
+) => {
+  const { data } = await axiosInstance.put(
+    `/dispatches/${dispatchId}/columns`,
+    { columns },
+  );
+  return data;
+};
+
 export const getAssignmentMatrixApi = async (date: string) => {
   const { data,footer }:any = await axiosInstance.get(
     `${ASSIGNMENT_ENDPOINTS.ASSIGNMENTS}/matrix`,
