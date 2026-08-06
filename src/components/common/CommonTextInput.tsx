@@ -14,6 +14,7 @@ interface CommonTextInputProps {
   error?: boolean;
   rightIcon?: React.ReactNode;
   onRightIconClick?: () => void;
+  disabled?: boolean;
 }
 
 const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
@@ -73,7 +74,8 @@ const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
           value={value}
           placeholder={placeholder}
           onChange={(e) => handleChange(e.target.value)}
-          className="cursor-pointer"
+          className={disabled ? "cursor-not-allowed" : "cursor-pointer"}
+          disabled={disabled}
           slotProps={{
             htmlInput: {
               min,
@@ -82,7 +84,7 @@ const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
             input: {
               endAdornment: rightIcon ? (
                 <InputAdornment position="end">
-                  <IconButton size="small" onClick={onRightIconClick}>
+                  <IconButton size="small" onClick={onRightIconClick} disabled={disabled}>
                     {rightIcon}
                   </IconButton>
                 </InputAdornment>

@@ -423,10 +423,11 @@ const ContractorModal = ({
                 onChange={(value) =>
                   setForm((prev) => ({ ...prev, password: value }))
                 }
-                placeholder="Enter password (optional for edit)"
+                placeholder={isEdit ? "Password cannot be changed here" : "Enter password (optional for edit)"}
                 type={showPassword ? "text" : "password"}
                 rightIcon={showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 onRightIconClick={() => setShowPassword((s) => !s)}
+                disabled={isEdit}
               />
 
               {/* Name */}
