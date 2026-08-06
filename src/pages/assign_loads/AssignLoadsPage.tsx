@@ -133,18 +133,22 @@ const AssignLoadsPage = () => {
       setAssignmentCards(res.data?.data?.columns.map(mapMatrixColumnToCard));
       const rows = (res.data?.data?.rows ?? [])
         .filter((row: any) => {
-          // Contractor row hai aur uske paas koi driver nahi hai
-          if (row.rowType === "contractor") {
-            return Array.isArray(row.drivers) && row.drivers.length > 0;
-          }
+    if (row.rowType === "contractor" || row.rowType === "driver") {
+      return row.drivers?.some(
+        (driver: any) =>
+          driver.truckUnitNumber &&
+          driver.truckUnitNumber.trim() !== ""
+      );
+    }
 
-          // Baaki sab rows show hongi
-          return true;
-        })
+    return true;
+  })
         .map((row: any, idx: number) => ({
           _rowKey: row.driverId ?? row.id ?? `row-${idx}`,
           driver: row.driver,
-          truckId: row.truckId,
+          truckId: Array.isArray(row.drivers)
+            ? row.drivers.map((d: any) => d.truckUnitNumber)
+            : [],
           drivers: Array.isArray(row.drivers)
             ? row.drivers.map((driver: any) => ({
                 id: driver.id,

@@ -745,6 +745,7 @@ const DispatchAssignmentGrid = ({
       >
         <div className="ag-theme-alpine w-full h-full">
           <AgGridReact
+          // domLayout="autoHeight"
             ref={gridRef}
             getRowId={(params) => getUniqueRowId(params.data)}
             theme={themeQuartz}
