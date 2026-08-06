@@ -22,6 +22,7 @@ import {
   getContractorsApi,
   deleteContractorApi,
   updateContractorApi,
+  getContractorByIdApi,
 } from "../../services/auth.service";
 import type { Contractor, ContractorPagination } from "../../types/auth.types";
 
@@ -349,9 +350,22 @@ if (filter !== "all") {
                 onPageChange={(page: number) => {
                   fetchContractors(page, pagination.limit);
                 }}
-                onEdit={(item) => {
-                  setSelectedContractor(item as ContractorRow);
-                  setEditContractorModalOpen(true);
+                onEdit={async (item) => {
+                  // fetch full contractor detail from API to ensure ownerDriver/ownerTruck are present
+                  try {
+                    setLoading(true);
+                    const res = await getContractorByIdApi((item as any).id || (item as any)._id);
+                    setSelectedContractor(res.data);
+                    setEditContractorModalOpen(true);
+                  } catch (err) {
+                    if (axios.isAxiosError(err)) {
+                      setError(err.response?.data?.message || "Unable to load contractor.");
+                    } else {
+                      setError("Unable to load contractor.");
+                    }
+                  } finally {
+                    setLoading(false);
+                  }
                 }}
                 onDelete={(item) => handleDelete(item as ContractorRow)}
                 onStatusToggle={(item) =>
