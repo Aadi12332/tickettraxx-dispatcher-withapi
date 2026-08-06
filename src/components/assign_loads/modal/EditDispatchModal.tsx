@@ -14,6 +14,7 @@ import {
   getLoadsByDispatchIdApi,
   updateDispatchColumnsApi,
 } from "../../../services/auth.service";
+import { toast } from "react-toastify";
 import type { Job, CreateLoadPayload } from "../../../types/auth.types";
 import dayjs from "dayjs";
 
@@ -417,28 +418,18 @@ const loadOptions = async () => {
       onSuccess?.();
       handleClose();
     } catch (err) {
-      console.error("Failed to create/update load:", err);
-
       // If backend reports assignments exist for columns being removed, show friendly toast
       if (axios.isAxiosError(err)) {
         const msg = err.response?.data?.error?.message || err.response?.data?.message || "";
         if (typeof msg === "string" && (msg.includes("already have an assignment") || msg.includes("Cannot remove column"))) {
-          // use react-toastify for toasts
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const { toast } = require("react-toastify");
-            toast.error("unable to update the load due to already assigned load");
-          } catch (e) {
-            console.error("Toast failed:", e);
-          }
+          toast.error("unable to update the load due to already assigned load");
         } else {
-          try {
-            const { toast } = require("react-toastify");
-            toast.error("Unable to create/update load");
-          } catch (e) {
-            console.error("Toast failed:", e);
-          }
+          toast.error("Unable to create/update load");
+          // fallback log for debugging
+          // console.error("Failed to create/update load:", err);
         }
+      } else {
+        toast.error("Unable to create/update load");
       }
     } finally {
       setSubmitting(false);
