@@ -19,6 +19,7 @@ interface CreateCustomerModalProps {
 }
 
 const initialName = "";
+const initialCode = "";
 
 const CreateCustomerModal = ({
   open,
@@ -28,10 +29,7 @@ const CreateCustomerModal = ({
   onSuccess,
 }: CreateCustomerModalProps) => {
   const [name, setName] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [code, setCode] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,26 +39,18 @@ const CreateCustomerModal = ({
 
     if (isEdit && editData) {
       setName(editData.name || "");
-      setContactName((editData as any).contactName || "");
-      setEmail(editData.email || "");
-      setPhone(editData.phone || "");
-      setAddress(editData.address || "");
+      // NOTE: API now expects `code` field
+      setCode((editData as any).code || "");
     } else {
       setName(initialName);
-      setContactName("");
-      setEmail("");
-      setPhone("");
-      setAddress("");
+      setCode(initialCode);
     }
     setError("");
   }, [open, isEdit, editData]);
 
   const handleClose = () => {
     setName(initialName);
-    setContactName("");
-    setEmail("");
-    setPhone("");
-    setAddress("");
+    setCode(initialCode);
     setError("");
     onClose();
   };
@@ -74,16 +64,14 @@ const CreateCustomerModal = ({
     try {
       const payload = {
         name: name.trim(),
-        contactName: contactName.trim() || undefined,
-        email: email.trim() || undefined,
-        phone: phone.trim() || undefined,
-        address: address.trim() || undefined,
+        // send code as per new API
+        code: code.trim() || undefined,
       };
 
       if (isEdit && editData) {
-        await updateCustomerApi(editData._id, payload);
+        await updateCustomerApi(editData._id, payload as any);
       } else {
-        await createCustomerApi(payload);
+        await createCustomerApi(payload as any);
       }
 
       onSuccess?.();
@@ -92,6 +80,7 @@ const CreateCustomerModal = ({
       if (axios.isAxiosError(err)) {
         setError(
           err.response?.data?.message ||
+            err.response?.data?.error?.message ||
             "Something went wrong. Please try again.",
         );
       } else {
@@ -118,6 +107,11 @@ const CreateCustomerModal = ({
               <p className="mt-3 text-sm text-[#717182]">
                 Create or update a customer.
               </p>
+
+              {/* API error shown at top of modal if any */}
+              {error && (
+                <p className="mt-3 text-sm text-red-500">{error}</p>
+              )}
             </div>
 
             <button onClick={handleClose} className="cursor-pointer">
@@ -126,7 +120,7 @@ const CreateCustomerModal = ({
           </div>
 
           {/* Form */}
-          <div className="px-3 pb-4 mt-6">
+          <div className="px-3 pb-4 mt-2">
             <div className="grid grid-cols-1 gap-6 max-h-[55dvh] overflow-y-auto">
               <CommonTextInput
                 label="Customer Name"
@@ -136,37 +130,12 @@ const CreateCustomerModal = ({
               />
 
               <CommonTextInput
-                label="Contact Name"
-                placeholder="Enter contact name..."
-                value={contactName}
-                onChange={setContactName}
-              />
-
-              <CommonTextInput
-                label="Email"
-                placeholder="Enter email..."
-                value={email}
-                onChange={setEmail}
-              />
-
-              <CommonTextInput
-                label="Phone"
-                placeholder="Enter phone..."
-                value={phone}
-                onChange={setPhone}
-              />
-
-              <CommonTextInput
-                label="Address"
-                placeholder="Enter address..."
-                value={address}
-                onChange={setAddress}
+                label="Code"
+                placeholder="Enter code (e.g., PST)"
+                value={code}
+                onChange={setCode}
               />
             </div>
-
-            {error && (
-              <p className="mt-4 text-sm text-red-500 text-center">{error}</p>
-            )}
 
             {/* Footer */}
             <div className="border-t border-[#E5E7EB] mt-8 pt-5 flex justify-center flex-wrap gap-4">
@@ -199,3 +168,4 @@ const CreateCustomerModal = ({
 };
 
 export default CreateCustomerModal;
+

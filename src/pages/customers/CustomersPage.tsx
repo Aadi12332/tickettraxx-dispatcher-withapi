@@ -17,14 +17,11 @@ import type { Customer } from "../../types/auth.types";
 const customerColumns = [
   { label: "#", key: "id" },
   { label: "Name", key: "name" },
-  { label: "Contact Name", key: "contactName" },
-  { label: "Email", key: "email" },
-  { label: "Phone", key: "phone" },
-  { label: "Address", key: "address" },
-  { label: "Details", key: "actions" },
+  { label: "Code", key: "code" },
+  { label: "Actions", key: "actions", minWidth: "100px" },
 ];
 
-type CustomerRow = Customer & { id: string; name: string; contactName?: string; email?: string; phone?: string; address?: string };
+type CustomerRow = Customer & { id: string; name: string; code?: string };
 
 const CustomersPage = () => {
   const [openModal, setOpenModal] = useState(false);
@@ -101,11 +98,8 @@ const CustomersPage = () => {
   const rows = customers.map((customer, index) => ({
     ...customer,
     id: (pagination.page - 1) * pagination.limit + index + 1,
-    name: customer.name,
-    contactName: (customer as any).contactName || "",
-    email: customer.email || "",
-    phone: customer.phone || "",
-    address: customer.address || "",
+    name: customer.name || "-",
+    code: (customer as any).code || "-",
   }));
 
   const filteredCustomers = rows.filter((item) => {
@@ -113,10 +107,7 @@ const CustomersPage = () => {
     const q = search.toLowerCase();
     return (
       (item.name || "").toLowerCase().includes(q) ||
-      (item.contactName || "").toLowerCase().includes(q) ||
-      (item.email || "").toLowerCase().includes(q) ||
-      (item.phone || "").toLowerCase().includes(q) ||
-      (item.address || "").toLowerCase().includes(q)
+      (item.code || "").toLowerCase().includes(q)
     );
   });
 

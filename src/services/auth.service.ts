@@ -207,14 +207,14 @@ export const getCustomersApi = async (
   return data;
 };
 
-export const createCustomerApi = async (payload: { name: string; contactName?: string; email?: string; phone?: string; address?: string }) => {
+export const createCustomerApi = async (payload: { name: string; code?: string }) => {
   const { data } = await axiosInstance.post(CUSTOMER_ENDPOINTS.CUSTOMERS, payload);
   return data;
 };
 
 export const updateCustomerApi = async (
   id: string,
-  payload: { name?: string; contactName?: string; email?: string; phone?: string; address?: string },
+  payload: { name?: string; code?: string },
 ) => {
   const { data } = await axiosInstance.patch(CUSTOMER_ENDPOINTS.CUSTOMER_BY_ID(id), payload);
   return data;
