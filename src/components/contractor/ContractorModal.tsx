@@ -268,14 +268,19 @@ const ContractorModal = ({
     if (isEdit && editData) {
       // populate truck fields if single
       const singleTruck =
-        Array.isArray(editData.trucks) && editData.trucks.length > 0
+        // prefer ownerTruck if API returned it
+        editData.ownerTruck ??
+        (Array.isArray(editData.trucks) && editData.trucks.length > 0
           ? editData.trucks[0]
-          : editData.truck || null;
+          : editData.truck || null);
+
+      // prefer ownerDriver for driver/contact info if provided
+      const ownerDriver = editData.ownerDriver ?? null;
 
       setForm({
         ...initialForm,
         companyName: editData.companyName ?? "",
-        email: editData.email ?? "",
+        email: editData.email ?? (ownerDriver?.email ?? ""),
         password: "",
         zipCode: editData.zipCode ?? "",
         state: editData.state ?? "",
@@ -292,8 +297,8 @@ const ContractorModal = ({
         address: editData.address ?? "",
         idType: normalizeIdType(editData.idType),
         id: editData.idNumber ?? "",
-        phone: editData.phone ?? "",
-        contactName: editData.contactName ?? "",
+        phone: ownerDriver?.phone ?? editData.phone ?? "",
+        contactName: ownerDriver?.name ?? editData.contactName ?? "",
         autoSendRenewalReminders: editData.autoSendRenewalReminders ?? true,
         usdot: editData.usdotNumber ?? "",
         txdot: editData.txdotNumber ?? "",
