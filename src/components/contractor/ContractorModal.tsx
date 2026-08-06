@@ -1,5 +1,5 @@
 import { Modal } from "@mui/material";
-import { X } from "lucide-react";
+import { X, Eye, EyeOff } from "lucide-react";
 import CommonTextInput from "../common/CommonTextInput";
 import CommonSelectInput from "../common/CommonSelectInput";
 import { IOSSwitch } from "../common/Switch";
@@ -58,6 +58,19 @@ const cityOptions = [
   { label: "Eaststone", value: "Eaststone" },
 ];
 
+const normalizeIdType = (value?: string) => {
+  if (!value) return "";
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized.includes("license")) return "Driver License";
+  if (normalized === "passport") return "Passport";
+  if (normalized === "state id") return "State ID";
+  if (normalized === "tax id") return "Tax ID";
+
+  return value;
+};
+
 const idTypeOptions = [
   { label: "Driver License", value: "Driver License" },
   { label: "Passport", value: "Passport" },
@@ -67,9 +80,9 @@ const idTypeOptions = [
 
 const initialForm = {
   companyName: "",
-  primaryDriverName: "",
-  unitNumber: "",
+  contactName: "",
   email: "",
+  password: "",
   contractPreview: "",
   coiPreview: "",
   zipCode: "",
@@ -81,8 +94,18 @@ const initialForm = {
   txdot: "",
   ownerOperatorOrFleet: "",
   payPercent: "",
-  trucks: "",
+  truckOwnership: "", // 'single' or 'multiple'
   truckCount: "",
+
+  // single truck details
+  truck_unitNumber: "",
+  truck_truckName: "",
+  truck_year: "",
+  truck_vinNumber: "",
+  truck_plateNumber: "",
+  truck_truckType: "",
+  truck_insuranceExpiry: "",
+  truck_alias: "",
 
   signatureDate: "",
   expirationDate: "",
@@ -93,11 +116,11 @@ const initialForm = {
   id: "",
   phoneCode: "+1",
   phone: "",
-  contactName: "",
-  unit: "",
   autoSendRenewalReminders: true,
   contractFile: null as File | null,
   coiFile: null as File | null,
+  dotInspectionFile: null as File | null,
+  dotInspectionPreview: "",
 };
 
 const ContractorModal = ({
@@ -111,6 +134,18 @@ const ContractorModal = ({
   const [cityOptionsState, setCityOptionsState] = useState(cityOptions);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Local calendar date 'YYYY-MM-DD' to prevent timezone shifts allowing previous UTC day
+  const getLocalToday = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const today = getLocalToday();
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleClose = () => {
     setForm(initialForm);
@@ -126,12 +161,12 @@ const ContractorModal = ({
       return;
     }
 
-    const rawPayload = {
+    const rawPayload: any = {
       companyName: form.companyName.trim(),
-      primaryDriverName: form.primaryDriverName.trim(),
-      unitNumber: form.unit,
+      contactName: form.contactName.trim(),
       phone: form.phone,
       email: form.email.trim(),
+      password: form.password.trim() || undefined,
       parkingLocation: form.parkingLocation,
       zipCode: form.zipCode,
       state: form.state,
@@ -141,13 +176,13 @@ const ContractorModal = ({
       address: form.address,
       idType: form.idType,
       idNumber: form.id,
-      contactName: form.contactName,
       autoSendRenewalReminders: form.autoSendRenewalReminders,
       usdotNumber: form.usdot,
       txdotNumber: form.txdot,
       ownerOperatorOrFleet: form.ownerOperatorOrFleet,
       payPercent: form.payPercent.replace("%", ""),
-      truckCount: form.trucks === "single" ? "1" : form.truckCount,
+      truckOwnership: form.truckOwnership,
+      truckCount: form.truckOwnership === "single" ? "1" : form.truckCount,
       phoneCode: form.phoneCode,
     };
 
@@ -159,12 +194,41 @@ const ContractorModal = ({
       }
     });
 
+    // If single truck, include truck JSON payload
+    if (form.truckOwnership === "single") {
+      const truckObj: any = {
+        unitNumber: form.truck_unitNumber || "",
+        truckName: form.truck_truckName || "",
+        year: form.truck_year || "",
+        vinNumber: form.truck_vinNumber || "",
+        plateNumber: form.truck_plateNumber || "",
+        truckType: form.truck_truckType || "",
+        insuranceExpiry: form.truck_insuranceExpiry || "",
+        alias: form.truck_alias
+          ? (JSON.parse(JSON.stringify(form.truck_alias)).split?.(",") ?? [
+              form.truck_alias,
+            ])
+          : undefined,
+      };
+
+      // remove undefined/empty
+      Object.keys(truckObj).forEach((k) => {
+        if (truckObj[k] === undefined || truckObj[k] === "") delete truckObj[k];
+      });
+
+      formData.append("truck", JSON.stringify(truckObj));
+    }
+
     if (form.contractFile) {
       formData.append("contract", form.contractFile);
     }
 
     if (form.coiFile) {
       formData.append("coi", form.coiFile);
+    }
+
+    if (form.dotInspectionFile) {
+      formData.append("dotInspection", form.dotInspectionFile);
     }
 
     setLoading(true);
@@ -202,12 +266,17 @@ const ContractorModal = ({
     if (!open) return;
 
     if (isEdit && editData) {
+      // populate truck fields if single
+      const singleTruck =
+        Array.isArray(editData.trucks) && editData.trucks.length > 0
+          ? editData.trucks[0]
+          : editData.truck || null;
+
       setForm({
         ...initialForm,
         companyName: editData.companyName ?? "",
-        primaryDriverName: editData.primaryDriverName ?? "",
-        unit: editData.unitNumber ?? "",
         email: editData.email ?? "",
+        password: "",
         zipCode: editData.zipCode ?? "",
         state: editData.state ?? "",
         city: editData.city ?? "",
@@ -221,7 +290,7 @@ const ContractorModal = ({
           ? editData.expirationDate.slice(0, 10)
           : "",
         address: editData.address ?? "",
-        idType: editData.idType ?? "",
+        idType: normalizeIdType(editData.idType),
         id: editData.idNumber ?? "",
         phone: editData.phone ?? "",
         contactName: editData.contactName ?? "",
@@ -238,10 +307,28 @@ const ContractorModal = ({
 
         contractPreview: editData.contractDocument?.url ?? "",
         coiPreview: editData.coiDocument?.url ?? "",
-        trucks: Number(editData.truckCount) > 1 ? "multiple" : "single",
+        dotInspectionPreview: editData.dotInspectionDocument?.url ?? editData.dotInspection?.url ?? "",
+        truckOwnership: Number(editData.truckCount) > 1 ? "multiple" : "single",
 
         truckCount: editData.truckCount ? String(editData.truckCount) : "",
         phoneCode: editData.phoneCode ?? "+1",
+
+        // single truck details
+        truck_unitNumber: singleTruck?.unitNumber ?? "",
+        truck_truckName: singleTruck?.truckName ?? "",
+        truck_year: singleTruck?.year ? String(singleTruck.year) : "",
+        truck_vinNumber: singleTruck?.vinNumber ?? "",
+        truck_plateNumber: singleTruck?.plateNumber ?? "",
+        truck_truckType: singleTruck?.truckType ?? "",
+        truck_insuranceExpiry: singleTruck?.insuranceExpiry
+          ? String(singleTruck.insuranceExpiry).slice(0, 10)
+          : "",
+        truck_alias: singleTruck?.alias
+          ? Array.isArray(singleTruck.alias)
+            ? singleTruck.alias.join(",")
+            : String(singleTruck.alias)
+          : "",
+        // dot inspection not stored locally — show empty
       });
     } else {
       setForm(initialForm);
@@ -251,7 +338,6 @@ const ContractorModal = ({
 
   const isFormValid = Boolean(
     form.companyName.trim() &&
-    form.primaryDriverName.trim() &&
     form.email.trim() &&
     form.zipCode.trim() &&
     form.state.trim() &&
@@ -267,13 +353,11 @@ const ContractorModal = ({
     form.ownerOperatorOrFleet.trim() &&
     form.payPercent.trim() &&
     form.contactName.trim() &&
-    form.unit.trim() &&
-    form.trucks.trim() &&
-    (form.trucks !== "multiple" || form.truckCount.trim()) &&
+    (form.truckOwnership === "single" ? true : form.truckCount.trim()) &&
     (form.contractFile !== null || form.contractPreview.trim()) &&
     (form.coiFile !== null || form.coiPreview.trim()) &&
     form.phoneCode.trim() &&
-    form.phone.trim()
+    form.phone.trim(),
   );
 
   return (
@@ -287,7 +371,7 @@ const ContractorModal = ({
                 {isEdit ? "Edit Contractor" : "Add Contractor"}
               </h2>
 
-              <p className="mt-3 text-sm text-[#717182]">
+              <p className="mt-1.5 text-sm text-[#717182]">
                 {isEdit && editData?.contractorCode
                   ? `Contractor Code: ${editData.contractorCode}`
                   : "Lorem Ipsum is simply dummy text of the printing and typesetting industry."}
@@ -315,21 +399,24 @@ const ContractorModal = ({
               </div>
 
               <CommonTextInput
-                label="Primary Driver Name"
-                value={form.primaryDriverName}
-                onChange={(value) =>
-                  setForm((prev) => ({ ...prev, primaryDriverName: value }))
-                }
-                placeholder="Enter driver name..."
-              />
-
-              <CommonTextInput
                 label="Email"
                 value={form.email}
                 onChange={(value) =>
                   setForm((prev) => ({ ...prev, email: value }))
                 }
                 placeholder="Enter email..."
+              />
+
+              <CommonTextInput
+                label="Password"
+                value={form.password}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, password: value }))
+                }
+                placeholder="Enter password (optional for edit)"
+                type={showPassword ? "text" : "password"}
+                rightIcon={showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                onRightIconClick={() => setShowPassword((s) => !s)}
               />
 
               {/* Name */}
@@ -424,21 +511,21 @@ const ContractorModal = ({
                 />
 
                 {form.contractPreview && (
-  <div className="mt-2">
-    {form.contractPreview.toLowerCase().endsWith(".pdf") ? (
-      <iframe
-        src={form.contractPreview}
-        className="w-full h-25 rounded border"
-      />
-    ) : (
-      <img
-        src={form.contractPreview}
-        alt="Contract"
-        className="w-full h-37.5 object-cover rounded-lg border"
-      />
-    )}
-  </div>
-)}
+                  <div className="mt-2">
+                    {form.contractPreview.toLowerCase().endsWith(".pdf") ? (
+                      <iframe
+                        src={form.contractPreview}
+                        className="w-full h-25 rounded border"
+                      />
+                    ) : (
+                      <img
+                        src={form.contractPreview}
+                        alt="Contract"
+                        className="w-full h-37.5 object-cover rounded-lg border"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -462,22 +549,22 @@ const ContractorModal = ({
                   }}
                 />
 
-               {form.coiPreview && (
-  <div className="mt-2">
-    {form.coiPreview.toLowerCase().endsWith(".pdf") ? (
-      <iframe
-        src={form.coiPreview}
-        className="w-full h-25 rounded border"
-      />
-    ) : (
-      <img
-        src={form.coiPreview}
-        alt="COI"
-        className="w-full h-37.5 object-cover rounded-lg border"
-      />
-    )}
-  </div>
-)}
+                {form.coiPreview && (
+                  <div className="mt-2">
+                    {form.coiPreview.toLowerCase().endsWith(".pdf") ? (
+                      <iframe
+                        src={form.coiPreview}
+                        className="w-full h-25 rounded border"
+                      />
+                    ) : (
+                      <img
+                        src={form.coiPreview}
+                        alt="COI"
+                        className="w-full h-37.5 object-cover rounded-lg border"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* USDOT + TxDOT */}
@@ -510,6 +597,7 @@ const ContractorModal = ({
                 label="Signature Date"
                 placeholder="mm/dd/yyyy"
                 type="date"
+                min={today}
                 value={form.signatureDate}
                 onChange={(value) =>
                   setForm((prev) => ({
@@ -523,6 +611,7 @@ const ContractorModal = ({
                 label="Expiration Date"
                 placeholder="mm/dd/yyyy"
                 type="date"
+                min={today}
                 value={form.expirationDate}
                 onChange={(value) =>
                   setForm((prev) => ({
@@ -534,7 +623,7 @@ const ContractorModal = ({
 
               {/* Address */}
               <div className="md:col-span-2">
-                <label className="block text-sm xl:text-base mb-2">
+                <label className="block text-sm mb-2">
                   Address
                 </label>
                 <textarea
@@ -631,33 +720,22 @@ const ContractorModal = ({
                 }
                 placeholder="Enter"
               />
-              <CommonTextInput
-                label="#Unit"
-                value={form.unit}
-                onChange={(value) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    unit: value,
-                  }))
-                }
-                placeholder="Enter"
-              />
               {/* Trucks */}
               <CommonSelectInput
-                label="How Many Trucks Do You Have?"
-                value={form.trucks}
+                label="Truck Ownership"
+                value={form.truckOwnership}
                 onChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
-                    trucks: value,
+                    truckOwnership: value,
                   }))
                 }
                 options={truckOptions}
               />
 
-              {form.trucks === "multiple" && (
+              {form.truckOwnership === "multiple" && (
                 <CommonTextInput
-                  label="Enter Truck Number"
+                  label="Enter Truck Count"
                   value={form.truckCount}
                   onChange={(value) =>
                     setForm((prev) => ({
@@ -665,8 +743,127 @@ const ContractorModal = ({
                       truckCount: value,
                     }))
                   }
-                  placeholder="e.g., 3"
+                  placeholder="e.g., 5"
                 />
+              )}
+
+              {form.truckOwnership === "single" && (
+                <>
+                  <CommonTextInput
+                    label="Unit Number"
+                    value={form.truck_unitNumber}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, truck_unitNumber: value }))
+                    }
+                    placeholder="e.g., TK-001"
+                  />
+
+                  <CommonTextInput
+                    label="Truck Name"
+                    value={form.truck_truckName}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, truck_truckName: value }))
+                    }
+                    placeholder="e.g., Freightliner Cascadia"
+                  />
+
+                  <CommonTextInput
+                    label="Year"
+                    value={form.truck_year}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, truck_year: value }))
+                    }
+                    placeholder="e.g., 2021"
+                  />
+
+                  <CommonTextInput
+                    label="VIN Number"
+                    value={form.truck_vinNumber}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, truck_vinNumber: value }))
+                    }
+                    placeholder="Enter VIN"
+                  />
+
+                  <CommonTextInput
+                    label="Plate Number"
+                    value={form.truck_plateNumber}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, truck_plateNumber: value }))
+                    }
+                    placeholder="Enter plate number"
+                  />
+
+                  <CommonTextInput
+                    label="Truck Type"
+                    value={form.truck_truckType}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, truck_truckType: value }))
+                    }
+                    placeholder="e.g., Dump Truck"
+                  />
+
+                  <CommonTextInput
+                    label="Insurance Expiry"
+                    type="date"
+                    min={today}
+                    value={form.truck_insuranceExpiry}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        truck_insuranceExpiry: value,
+                      }))
+                    }
+                  />
+
+                  <CommonTextInput
+                    label="Alias (comma separated)"
+                    value={form.truck_alias}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, truck_alias: value }))
+                    }
+                    placeholder="e.g., Red Rig"
+                  />
+
+                  <div>
+                    <CommonFileUpload
+                      label="Upload DOT Inspection"
+                      onChange={(file) => {
+                        if (!file) return;
+
+                        if (!allowedTypes.includes(file.type)) {
+                          setError(
+                            "Only PDF, JPG, JPEG and PNG files are allowed.",
+                          );
+                          return;
+                        }
+
+                        setForm((prev) => ({
+                          ...prev,
+                          dotInspectionFile: file,
+                          dotInspectionPreview: URL.createObjectURL(file),
+                        }));
+                      }}
+                    />
+
+                    {form.dotInspectionPreview && (
+                      <div className="mt-2">
+                        {form.dotInspectionPreview.toLowerCase().endsWith(".pdf") ? (
+                          <iframe
+                            src={form.dotInspectionPreview}
+                            className="w-full h-25 rounded border"
+                          />
+                        ) : (
+                          <img
+                            src={form.dotInspectionPreview}
+                            alt="DOT Inspection"
+                            className="w-full h-37.5 object-cover rounded-lg border"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
 
               {/* Auto Renewal */}

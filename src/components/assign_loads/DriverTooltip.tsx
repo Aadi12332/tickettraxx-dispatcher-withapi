@@ -53,7 +53,7 @@ const DriverTooltip = ({
               className="grid grid-cols-2 px-2 py-2 border-b border-gray-100 text-[10px] cursor-pointer"
             >
               <span>{driver.name}</span>
-              <span className="flex items-center justify-end font-medium mr-2">
+              <span className="flex items-center justify-end text-end font-medium mr-2">
                 {driver.truckUnitNumber ?? driver.truckId ?? "-"}
               </span>
             </div>

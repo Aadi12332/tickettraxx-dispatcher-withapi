@@ -47,8 +47,8 @@ type ContractorRow = Contractor & {
 const mapContractorToRow = (item: Contractor): ContractorRow => ({
   ...item,
   id: item._id,
-  driverName: item?.primaryDriverName ?? "",
-  contractor: item.companyName,
+  driverName: item?.primaryDriverName  || "-",
+  contractor: item.companyName || "-",
   phone: item.phone || "-",
   status: item.status === "active" ? "Active" : "Inactive",
 });

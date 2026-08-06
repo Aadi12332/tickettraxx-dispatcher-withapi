@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { TextField } from "@mui/material";
+import { TextField, InputAdornment, IconButton } from "@mui/material";
 
 interface CommonTextInputProps {
   label: string;
@@ -12,6 +12,8 @@ interface CommonTextInputProps {
   min?: string;
   max?: string;
   error?: boolean;
+  rightIcon?: React.ReactNode;
+  onRightIconClick?: () => void;
 }
 
 const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
@@ -27,6 +29,8 @@ const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
       min,
       max,
       error = false,
+      rightIcon,
+      onRightIconClick,
     },
     ref,
   ) => {
@@ -58,7 +62,7 @@ const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
 
     return (
       <div className="w-full">
-        <label className="block text-sm xl:text-base font-normal text-black mb-2.5">
+        <label className="block text-sm font-normal text-black mb-2.5">
           {label}
         </label>
 
@@ -74,6 +78,15 @@ const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
             htmlInput: {
               min,
               max,
+            },
+            input: {
+              endAdornment: rightIcon ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={onRightIconClick}>
+                    {rightIcon}
+                  </IconButton>
+                </InputAdornment>
+              ) : undefined,
             },
           }}
           sx={{

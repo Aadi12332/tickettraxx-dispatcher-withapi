@@ -11,7 +11,7 @@ const CommonFileUpload = ({
 }: CommonFileUploadProps) => {
   return (
     <div className="w-full">
-      <label className="block text-sm md:text-base font-normal text-black mb-2.5">
+      <label className="block text-sm font-normal text-black mb-2.5">
         {label}
       </label>
 

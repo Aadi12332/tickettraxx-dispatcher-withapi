@@ -310,6 +310,16 @@ export const getContractorByIdApi = async (
 export const createContractorApi = async (
   payload: ContractorPayload | FormData,
 ): Promise<ContractorResponse> => {
+  // If payload is FormData (multipart), ensure correct headers so browser sets boundary
+  if (payload instanceof FormData) {
+    const { data } = await axiosInstance.post<ContractorResponse>(
+      CONTRACTOR_ENDPOINTS.CONTRACTORS,
+      payload,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return data;
+  }
+
   const { data } = await axiosInstance.post<ContractorResponse>(
     CONTRACTOR_ENDPOINTS.CONTRACTORS,
     payload,
@@ -336,6 +346,7 @@ export const uploadContractorFilesApi = async (
   const { data } = await axiosInstance.patch(
     CONTRACTOR_ENDPOINTS.CONTRACTOR_BY_ID(id),
     formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
   );
   return data;
 };

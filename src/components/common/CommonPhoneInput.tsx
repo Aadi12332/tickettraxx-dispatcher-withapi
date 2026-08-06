@@ -34,7 +34,7 @@ const CommonPhoneInput = ({
 
   return (
     <div className="w-full">
-      <label className="block text-sm xl:text-base font-normal text-black mb-2.5">
+      <label className="block text-sm font-normal text-black mb-2.5">
         {label}
       </label>
 
