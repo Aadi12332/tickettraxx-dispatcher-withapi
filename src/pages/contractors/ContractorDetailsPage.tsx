@@ -110,7 +110,6 @@ const TABS = [
 const ContractorDetailsPage = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [activeTab, setActiveTab] = useState("overview");
   const [jobSearch, setJobSearch] = useState("");
   const [openAssignModal, setOpenAssignModal] = useState(false);
   const [openSuccessModal, setOpenSuccessModal] = useState(false);
@@ -122,6 +121,16 @@ const ContractorDetailsPage = () => {
   const [successTitle, setSuccessTitle] = useState(
     "You have successfully updated the contractor.",
   );
+
+const [activeTab, setActiveTab] = useState(() => {
+  return localStorage.getItem(`contractor-tab-${id}`) || "overview";
+});
+
+useEffect(() => {
+  if (id) {
+    localStorage.setItem(`contractor-tab-${id}`, activeTab);
+  }
+}, [id, activeTab]);
 
   const handleToggleStatus = async () => {
     if (!id) return;
@@ -455,9 +464,7 @@ const ContractorDetailsPage = () => {
         </div>
       </div>
 
-      <p
-        className="bg-white rounded-lg shadow-xs px-4 sm:px-6 py-5 flex items-center justify-between gap-3"
-      >
+      <p className="bg-white rounded-lg shadow-xs px-4 sm:px-6 py-5 flex items-center justify-between gap-3">
         Need to assign load to a driver with truck?
         <CommonButton
           variant="primary"
@@ -469,7 +476,6 @@ const ContractorDetailsPage = () => {
       </p>
 
       <div className="bg-white rounded-xl shadow-sm border border-[#E8E8E8] overflow-hidden">
-        {/* Tab bar */}
         <div className="flex border-b border-[#E8E8E8] overflow-x-auto scrollbar-hide justify-start lg:justify-between flex-wrap">
           {TABS.map((tab) => {
             const isTabActive = activeTab === tab.key;
@@ -499,7 +505,6 @@ const ContractorDetailsPage = () => {
           })}
         </div>
 
-        {/* ── Overview tab ── */}
         {activeTab === "overview" && (
           <div className="space-y-3">
             {/* Drivers section */}
@@ -645,7 +650,9 @@ const ContractorDetailsPage = () => {
             contractorId={id}
           />
         )}
-        {activeTab === "amount-paid" && <AmountPaidTab />}
+
+        {activeTab === "amount-paid" && <AmountPaidTab contractorId={id} />}
+
         {activeTab === "truck-details" && (
           <TruckDetailsTab
             trucks={contractor?.trucks}
@@ -653,8 +660,12 @@ const ContractorDetailsPage = () => {
             loading={loading}
           />
         )}
-        {activeTab === "tickets" && <TicketsTab />}
-        {activeTab === "statement" && <SettlementStatementTab />}
+
+        {activeTab === "tickets" && <TicketsTab contractorId={id} />}
+
+        {activeTab === "statement" && (
+          <SettlementStatementTab contractorId={id} />
+        )}
       </div>
 
       <AddJobModal

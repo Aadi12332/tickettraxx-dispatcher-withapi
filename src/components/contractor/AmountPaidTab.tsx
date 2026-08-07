@@ -1,70 +1,15 @@
 import { Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import dayjs from "dayjs";
 import Table from "../common/Table";
-export const amountPaidData = [
-  {
-    id: 1,
-    jobId: "#280099",
-    date: "23/01/2026",
-    driver: "Andrew Brooks",
-    amountPaid: "$3200.00",
-  },
-  {
-    id: 2,
-    jobId: "#280798",
-    date: "10/02/2026",
-    driver: "Andrew Brooks",
-    amountPaid: "$3200.00",
-  },
-  {
-    id: 3,
-    jobId: "#280798",
-    date: "10/02/2026",
-    driver: "Mark Lucas",
-    amountPaid: "$3200.00",
-  },
-  {
-    id: 4,
-    jobId: "#280798",
-    date: "10/02/2026",
-    driver: "Mark Lucas",
-    amountPaid: "$2500.00",
-  },
-  {
-    id: 5,
-    jobId: "#280692",
-    date: "10/02/2026",
-    driver: "Mark Lucas",
-    amountPaid: "$2500.00",
-  },
-  {
-    id: 6,
-    jobId: "#280692",
-    date: "10/02/2026",
-    driver: "Mark Lucas",
-    amountPaid: "$2500.00",
-  },
-  {
-    id: 7,
-    jobId: "#280692",
-    date: "10/02/2026",
-    driver: "John Drake",
-    amountPaid: "$2500.00",
-  },
-  {
-    id: 8,
-    jobId: "#280692",
-    date: "08/01/2026",
-    driver: "John Drake",
-    amountPaid: "$4200.00",
-  },
-];
+import { getContractorAmountPaidApi } from "../../services/auth.service";
+import type { AmountPaidItem } from "../../types/auth.types";
 
 export const amountPaidColumns = [
   {
     label: "Job ID",
     key: "jobId",
-    textColor:"#1D3461"
+    textColor: "#1D3461",
   },
   {
     label: "Date",
@@ -80,31 +25,68 @@ export const amountPaidColumns = [
   },
 ];
 
-const AmountPaidTab = () => {
+const formatCurrency = (n: number) => {
+  return `$${n?.toFixed(2) ?? "0.00"}`;
+};
+
+const AmountPaidTab = ({ contractorId }: { contractorId?: string }) => {
   const [search, setSearch] = useState("");
+  const [data, setData] = useState<AmountPaidItem[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-const filteredData = useMemo(() => {
-  const value = search.toLowerCase().trim();
+  useEffect(() => {
+    const fetch = async () => {
+      if (!contractorId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await getContractorAmountPaidApi(contractorId);
+        setData(res.data || []);
+        setTotal(res.totalAmountPaid || 0);
+      } catch (err) {
+        console.error(err);
+        setError("Unable to load amount paid");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (!value) return amountPaidData;
+    fetch();
+  }, [contractorId]);
 
-  return amountPaidData.filter((item) =>
-    Object.values(item).some((field) =>
-      String(field).toLowerCase().includes(value)
-    )
-  );
-}, [search]);
+  const mapped = data.map((it) => ({
+    id: it._id,
+    jobId: it.jobCode ?? it.jobId ?? it.ticketNo ?? "-",
+    date: it.date ? dayjs(it.date).format("DD MMM YYYY") : "-",
+    driver: it.driverName ?? "-",
+    amountPaid: formatCurrency(it.amountPaid ?? 0),
+  }));
+
+  const filteredData = useMemo(() => {
+    const value = search.toLowerCase().trim();
+
+    if (!value) return mapped;
+
+    return mapped.filter((item) =>
+      Object.values(item).some((field) =>
+        String(field).toLowerCase().includes(value),
+      ),
+    );
+  }, [search, mapped]);
+
   return (
     <div className="border border-[#E5E7EB]">
       <div className="flex items-center justify-between gap-3 p-2 sm:p-4">
         <h3 className="text-base sm:text-lg font-semibold text-[#1B2D6B]">
-            Amount Paid
+          Amount Paid
         </h3>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 border-t border-[#E5E7EB] pt-5 px-2 sm:px-4">
         <p className="text-sm sm:text-base font-medium text-[#1B2D6B]">
-          Total Amount Paid : $32000.00
+          Total Amount Paid : {formatCurrency(total)}
         </p>
         <div className="relative w-full sm:w-auto">
           <Search
@@ -122,7 +104,18 @@ const filteredData = useMemo(() => {
       </div>
 
       <div className="p-4">
-        <Table data={filteredData} columns={amountPaidColumns} isCheckbox={false} minWidth="min-w-[800px]" />
+        {loading ? (
+          <p className="text-sm text-[#6B7280]">Loading...</p>
+        ) : error ? (
+          <p className="text-sm text-red-500">{error}</p>
+        ) : (
+          <Table
+            data={filteredData}
+            columns={amountPaidColumns}
+            isCheckbox={false}
+            minWidth="min-w-[800px]"
+          />
+        )}
       </div>
     </div>
   );

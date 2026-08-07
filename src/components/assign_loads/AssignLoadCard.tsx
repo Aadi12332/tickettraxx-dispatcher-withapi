@@ -11,6 +11,8 @@ import { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 import DeleteBatchModal from "../common/modal/DeleteBatchModal";
 import CommonConfirmModal from "../common/modal/CommonConfirmModal";
+import { deleteDispatchApi } from "../../services/auth.service";
+import { toast } from "react-toastify";
 
 interface AssignLoadCardProps {
   driverName: string;
@@ -27,6 +29,7 @@ interface AssignLoadCardProps {
   dispatchId?: string;
   onCancelReroute?: () => void;
   onEditDispatch?: (dispatchId?: string) => void;
+  onDeleteDispatch?: (dispatchId?: string) => void;
   expandOnHover?: boolean;
 }
 
@@ -44,6 +47,7 @@ const AssignLoadCard = ({
   dispatchId,
   onCancelReroute,
   onEditDispatch,
+  onDeleteDispatch,
   expandOnHover = true,
 }: AssignLoadCardProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -58,6 +62,9 @@ const AssignLoadCard = ({
   const [isWillCall, setIsWillCall] = useState(false);
   const [isWillCallModalOpen, setIsWillCallModalOpen] = useState(false);
   const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  console.log(deleteError, "deleteError");
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -300,13 +307,19 @@ const AssignLoadCard = ({
         <MenuItem
           onClick={() => {
             handleMenuClose();
+            if (!dispatchId) {
+              toast.error("dispatch id not found");
+              return;
+            }
+            setDeleteError(null);
             setShowDeleteModal(true);
           }}
+          disabled={isDeleting}
         >
           <Trash2 size={12} color="#FF0000" strokeWidth={3} />
           <ListItemText
             primary={
-              <span className="text-sm font-medium ml-2">Delete Batch</span>
+              <span className="text-sm font-medium ml-2">{isDeleting ? 'Deleting...' : 'Delete Batch'}</span>
             }
           />
         </MenuItem>
@@ -315,8 +328,35 @@ const AssignLoadCard = ({
       <DeleteBatchModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
           setShowDeleteModal(false);
+          if (!dispatchId) {
+            setDeleteError("dispatch id not found");
+            return;
+          }
+          setIsDeleting(true);
+          setDeleteError(null);
+          try {
+            await deleteDispatchApi(dispatchId);
+            // notify parent that dispatch was deleted
+            // parent can refresh list when provided
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            onDeleteDispatch?.(dispatchId);
+          } catch (err: any) {
+            const apiMessage = err?.response?.data?.error?.message;
+
+            let message = "Unable to delete batch.";
+
+            if (apiMessage?.includes("assigned loads")) {
+              message =
+                "This dispatch has assigned loads. Please cancel or reassign them before deleting.";
+            }
+
+            toast.error(message);
+            setDeleteError(message);
+          } finally {
+            setIsDeleting(false);
+          }
         }}
       />
 

@@ -153,6 +153,110 @@ export interface AlertResponse {
   unread: number;
 }
 
+export interface AmountPaidItem {
+  _id: string;
+  ticketNo?: string;
+  jobId?: string;
+  jobCode?: string;
+  date?: string;
+  driverId?: string;
+  driverName?: string;
+  amountPaid?: number;
+}
+
+export interface AmountPaidResponse {
+  data: AmountPaidItem[];
+  totalAmountPaid: number;
+  pagination: Pagination;
+}
+
+export interface Ticket {
+  _id: string;
+  ticketNo?: string;
+  tripId?: any;
+  loadId?: { _id: string; loadNo?: string } | null;
+  jobId?: { _id: string; code?: string } | null;
+  customerId?: { _id: string; name?: string } | null;
+  contractorId?: { _id: string; companyName?: string } | null;
+  driverId?: { _id: string; name?: string } | null;
+  date?: string;
+  pickupSiteId?: { _id: string; name?: string; address?: string } | null;
+  dropSiteId?: { _id: string; name?: string; address?: string } | null;
+  materialId?: { _id: string; name?: string } | null;
+  tonnage?: number;
+  invoiceRate?: number;
+  contractorRate?: number;
+  amount?: number;
+  contractorAmount?: number;
+  fscPct?: number;
+  approvalStatus?: string;
+  billingStatus?: string;
+  statementId?: any;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TicketPagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export interface TicketListResponse {
+  data: Ticket[];
+  pagination: TicketPagination;
+}
+
+export interface StatementLineItem {
+  ticketId: string;
+  ticketNo: string;
+  date: string;
+  pickup?: string;
+  deliver?: string;
+  tonnage?: number;
+  contractorRate?: number;
+  contractorAmount?: number;
+  fscPct?: number;
+  fscAmount?: number;
+}
+
+export interface Statement {
+  statementNo: string;
+  driverId: string;
+  driverType?: string;
+  contractorId?: string;
+  truckId?: string | null;
+  payPeriod?: { from: string; to: string };
+  lineItems: StatementLineItem[];
+  ticketIds: string[];
+  gross: number;
+  payPercent?: number;
+  payAmount?: number;
+  fscTotal?: number;
+  deductionsTotal?: number;
+  deductionApplications?: any[];
+  netPay?: number;
+  status?: string;
+  paidAt?: string | null;
+  _id?: string;
+}
+
+export interface GeneratedStatementEntry {
+  driverId: string;
+  driverName: string;
+  statement: Statement;
+}
+
+export interface BulkGenerateResponse {
+  data: {
+    generated: GeneratedStatementEntry[];
+    skippedNoTickets: { driverId: string; driverName: string }[];
+    failed: any[];
+    fixedPaymentTypeDrivers: any[];
+  };
+}
+
 export interface DispatchItem {
   _id: string;
   date: string;

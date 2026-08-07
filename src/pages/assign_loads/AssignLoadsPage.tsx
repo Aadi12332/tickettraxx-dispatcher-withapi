@@ -437,6 +437,14 @@ const AssignLoadsPage = () => {
                           setSelectedDispatchId(dispatchId ?? null);
                           setShowEditModal(true);
                         }}
+                        onDeleteDispatch={async (dispatchId) => {
+                          // refresh matrix after a dispatch is deleted
+                          try {
+                            await loadAssignments();
+                          } catch (err) {
+                            console.error('Failed to reload assignments after delete', err);
+                          }
+                        }}
                       />
                     ))}
                   </div>

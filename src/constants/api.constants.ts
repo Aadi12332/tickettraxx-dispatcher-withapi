@@ -36,6 +36,7 @@ export const DISPATCH_ENDPOINTS = {
   GET_DISPATCH_BOARD: "/dispatches/board",
   CREATE_DISPATCH: "/dispatches",
   EXPORT_DISPATCH: (id: string) => `/dispatches/${id}/export`,
+  DISPATCH_BY_ID: (id: string) => `/dispatches/${id}`,
 } as const;
 
 export const FSC_ENDPOINTS = {
@@ -58,6 +59,7 @@ export const API_CONSTANTS = {
 export const CONTRACTOR_ENDPOINTS = {
   CONTRACTORS: "/contractors",
   CONTRACTOR_BY_ID: (id: string) => `/contractors/${id}`,
+  AMOUNT_PAID: (id: string) => `/contractors/${id}/amount-paid`,
 } as const;
  
 export const JOB_ENDPOINTS = {
@@ -91,4 +93,14 @@ export const TRUCK_ENDPOINTS = {
 
 export const ASSIGNMENT_ENDPOINTS = {
   ASSIGNMENTS: "/assignments",
+} as const;
+
+export const TICKET_ENDPOINTS = {
+  TICKETS: "/tickets",
+  TICKET_BY_ID: (id: string) => `/tickets/${id}`,
+} as const;
+
+export const STATEMENT_ENDPOINTS = {
+  BULK_GENERATE: "/statements/bulk-generate",
+  COMBINED_XLSX: "/statements/combined-xlsx",
 } as const;

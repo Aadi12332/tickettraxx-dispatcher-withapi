@@ -15,6 +15,8 @@ import {
   MATERIAL_ENDPOINTS,
   NOTIFICATION_ENDPOINTS,
   TRUCK_ENDPOINTS,
+  TICKET_ENDPOINTS,
+  STATEMENT_ENDPOINTS,
 } from "../constants/api.constants";
 import type {
   LoginPayload,
@@ -45,6 +47,7 @@ import type {
   ContractorPayload,
   ContractorResponse,
   ContractorDetailResponse,
+  AmountPaidResponse,
   JobListResponse,
   CreateJobPayload,
   JobResponse,
@@ -61,6 +64,8 @@ import type {
   CreateDispatchPayload,
   DispatchResponse,
   DispatchBoardResponse,
+  TicketListResponse,
+  BulkGenerateResponse,
 } from "../types/auth.types";
 
 // ---------- Auth ----------
@@ -154,6 +159,13 @@ export const createDispatchApi = async (
 export const exportDispatchApi = async (id: string) => {
   const { data } = await axiosInstance.get(
     DISPATCH_ENDPOINTS.EXPORT_DISPATCH(id),
+  );
+  return data;
+};
+
+export const deleteDispatchApi = async (id: string) => {
+  const { data } = await axiosInstance.delete(
+    DISPATCH_ENDPOINTS.DISPATCH_BY_ID(id),
   );
   return data;
 };
@@ -315,6 +327,18 @@ export const getContractorByIdApi = async (
 ): Promise<ContractorDetailResponse> => {
   const { data } = await axiosInstance.get<ContractorDetailResponse>(
     CONTRACTOR_ENDPOINTS.CONTRACTOR_BY_ID(id),
+  );
+  return data;
+};
+
+export const getContractorAmountPaidApi = async (
+  contractorId: string,
+  page = 1,
+  limit = 20,
+): Promise<AmountPaidResponse> => {
+  const { data } = await axiosInstance.get<AmountPaidResponse>(
+    CONTRACTOR_ENDPOINTS.AMOUNT_PAID(contractorId),
+    { params: { page, limit } },
   );
   return data;
 };
@@ -502,6 +526,48 @@ export const getAssignmentsApi = async (): Promise<AssignmentListResponse> => {
     ASSIGNMENT_ENDPOINTS.ASSIGNMENTS,
   );
   return data;
+};
+
+export const getTicketsApi = async (params?: {
+  contractorId?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  fromDate?: string;
+  toDate?: string;
+  approvalStatus?: string;
+  billingStatus?: string;
+}): Promise<TicketListResponse> => {
+  const { data } = await axiosInstance.get<TicketListResponse>(
+    TICKET_ENDPOINTS.TICKETS,
+    { params },
+  );
+  return data;
+};
+
+export const generateStatementsApi = async (payload: {
+  contractorId: string;
+  from: string;
+  to: string;
+  applyDeductions?: boolean;
+}) => {
+  const { data } = await axiosInstance.post<BulkGenerateResponse>(
+    STATEMENT_ENDPOINTS.BULK_GENERATE,
+    payload,
+  );
+  return data;
+};
+
+export const downloadCombinedStatementsXlsx = async (
+  contractorId: string,
+  from: string,
+  to: string,
+) => {
+  const response = await axiosInstance.get(
+    `${STATEMENT_ENDPOINTS.COMBINED_XLSX}?contractorId=${contractorId}&from=${from}&to=${to}`,
+    { responseType: "blob" },
+  );
+  return response;
 };
 
 // ------- Dispatch columns update -------
