@@ -1,9 +1,10 @@
-import { Search, Menu, LogOut } from "lucide-react";
+import { Search, Menu, LogOut, MessageCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Bell from "../../assets/icons/NotificationBell.svg";
 import NotificationDrawer from "./NotificationDrawer";
 import { useAuth, getInitials } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/NotificationContext";
+import Chatbot from "./Chatbot";
 
 interface HeaderProps {
   setIsMobileOpen?: (open: boolean) => void;
@@ -15,6 +16,7 @@ const Header = ({ setIsMobileOpen }: HeaderProps) => {
   const [notifOpen, setNotifOpen] = useState(false);
   const { user, logout } = useAuth();
   const { unread } = useNotification();
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -71,19 +73,34 @@ const Header = ({ setIsMobileOpen }: HeaderProps) => {
 
       <div className="flex items-center gap-4 lg:gap-8">
         <div className="flex items-center gap-3 lg:gap-5">
-         <button
-  onClick={() => setNotifOpen((v) => !v)}
-  className="relative text-black hover:text-gray-800 transition-colors cursor-pointer sm:-ml-2"
->
-  <img src={Bell} alt="Bell" className="size-8 lg:size-10" />
+          <button
+            onClick={() => setNotifOpen((v) => !v)}
+            className="relative text-black hover:text-gray-800 transition-colors cursor-pointer sm:-ml-2"
+          >
+            <img src={Bell} alt="Bell" className="size-8 lg:size-10" />
 
-  {unread > 0 && (
-    <span className="absolute top-0 left-5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center leading-none">
-      {unread > 99 ? "99+" : unread}
-    </span>
-  )}
-</button>
+            {unread > 0 && (
+              <span className="absolute top-0 left-5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center leading-none">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
+          </button>
         </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowChat((s) => !s)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <MessageCircle size={20} />
+            </button>
+            <span className="bg-red-500 absolute top-0 right-1 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center text-[8px]">
+              5
+            </span>
+          </div>
+          {showChat && (
+            <Chatbot open={showChat} onClose={() => setShowChat(false)} />
+          )}
 
         <NotificationDrawer
           open={notifOpen}

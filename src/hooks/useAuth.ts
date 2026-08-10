@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { STORAGE_KEYS } from "../constants/api.constants";
 import type { User } from "../types/auth.types";
@@ -27,14 +28,14 @@ export const getInitials = (name?: string): string => {
 
 export const useAuth = () => {
   const navigate = useNavigate();
-  const user = getStoredUser();
+  const user = useMemo(() => getStoredUser(), []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
     navigate("/login", { replace: true });
-  };
+  }, [navigate]);
 
   return { user, isAuthenticated, logout };
 };
