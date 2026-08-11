@@ -242,15 +242,18 @@ const ContractorModal = ({
       onSuccess?.();
       handleClose();
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setError(
-          err.response?.data?.message ||
-            "Something went wrong. Please try again.",
-        );
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
-    } finally {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data;
+
+    setError(
+      data?.error?.message ||
+      data?.message ||
+      "Something went wrong. Please try again."
+    );
+  } else {
+    setError("Something went wrong. Please try again.");
+  }
+} finally {
       setLoading(false);
     }
   };
@@ -896,7 +899,7 @@ const ContractorModal = ({
             </div>
 
             {error && (
-              <p className="px-5 mt-2 text-sm text-red-500 text-center">
+              <p className="px-5 mt-2 text-sm text-red-500 text-start">
                 {error}
               </p>
             )}

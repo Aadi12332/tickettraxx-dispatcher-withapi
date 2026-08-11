@@ -259,10 +259,12 @@ useEffect(() => {
   const displayName = contractor?.companyName || "Loading...";
   const displayPhone = contractor?.phone || "-";
   const displayEmail = contractor?.email || "-";
-  // Address/USDOT/TxDOT contractor detail API me nahi aate — dummy hi rehte hain
-  const displayAddress = "1861 Bayonne Ave,\nManchester, NJ, 08759";
-  const usdot = "1234567";
-  const txdot = "TX-98765";
+const displayAddress = contractor
+  ? `${contractor.address || "-"},\n${contractor.city || "-"}, ${contractor.state || "-"}, ${contractor.zipCode || "-"}`
+  : "-";
+
+const usdot = contractor?.usdotNumber || "-";
+const txdot = contractor?.txdotNumber || "-";
 
   const handleSendMail = () => {
     const subject = encodeURIComponent(`Hello ${displayName}`);
