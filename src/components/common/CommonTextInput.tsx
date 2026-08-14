@@ -15,6 +15,8 @@ interface CommonTextInputProps {
   rightIcon?: React.ReactNode;
   onRightIconClick?: () => void;
   disabled?: boolean;
+  autoComplete?: string;
+name?: string;
 }
 
 const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
@@ -33,6 +35,8 @@ const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
       rightIcon,
       onRightIconClick,
       disabled = false,
+        autoComplete = "off",
+  name,
     },
     ref,
   ) => {
@@ -72,6 +76,8 @@ const CommonTextInput = forwardRef<HTMLInputElement, CommonTextInputProps>(
           inputRef={ref}
           fullWidth
           type={type}
+          name={name}
+autoComplete={autoComplete}
           value={value}
           placeholder={placeholder}
           onChange={(e) => handleChange(e.target.value)}

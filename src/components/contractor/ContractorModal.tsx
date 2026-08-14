@@ -5,7 +5,7 @@ import CommonSelectInput from "../common/CommonSelectInput";
 import { IOSSwitch } from "../common/Switch";
 import CommonFileUpload from "../common/CommonFileUpload";
 import CommonButton from "../common/CommonButton";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { parkingLocationOptions, truckOptions } from "../../utils/data";
 import CommonPhoneInput from "../common/CommonPhoneInput";
 import axios from "axios";
@@ -14,11 +14,75 @@ import {
   uploadContractorFilesApi,
 } from "../../services/auth.service";
 
+type ContractorEditData = {
+  _id?: string;
+  id?: string;
+  companyName?: string;
+  email?: string;
+  zipCode?: string;
+  state?: string;
+  city?: string;
+  parkingLocation?: string;
+  signatureDate?: string | null;
+  expirationDate?: string | null;
+  address?: string;
+  idType?: string;
+  idNumber?: string;
+  phone?: string;
+  contactName?: string;
+  autoSendRenewalReminders?: boolean;
+  usdotNumber?: string;
+  txdotNumber?: string;
+  ownerOperatorOrFleet?: string;
+  payPercent?: number | string;
+  truckCount?: number | string;
+  countryCode?: string;
+  contractDocument?: { url?: string };
+  coiDocument?: { url?: string };
+  dotInspectionDocument?: { url?: string };
+  dotInspection?: { url?: string };
+  ownerDriver?: { email?: string; phone?: string; name?: string };
+  ownerTruck?: {
+    unitNumber?: string;
+    truckName?: string;
+    year?: number | string;
+    vinNumber?: string;
+    plateNumber?: string;
+    truckType?: string;
+    insuranceExpiry?: string | number | Date;
+    alias?: string | string[];
+    dotInspectionDocument?: { url?: string };
+  };
+  trucks?: Array<{
+    unitNumber?: string;
+    truckName?: string;
+    year?: number | string;
+    vinNumber?: string;
+    plateNumber?: string;
+    truckType?: string;
+    insuranceExpiry?: string | number | Date;
+    alias?: string | string[];
+    dotInspectionDocument?: { url?: string };
+  }>;
+  truck?: {
+    unitNumber?: string;
+    truckName?: string;
+    year?: number | string;
+    vinNumber?: string;
+    plateNumber?: string;
+    truckType?: string;
+    insuranceExpiry?: string | number | Date;
+    alias?: string | string[];
+    dotInspectionDocument?: { url?: string };
+  };
+  contractorCode?: string;
+};
+
 interface ContractorModalProps {
   open: boolean;
   onClose: () => void;
   isEdit?: boolean;
-  editData?: any | null;
+  editData?: ContractorEditData | null;
   // Create/update successful hone ke baad parent ko batane ke liye, taaki list refresh ho sake
   onSuccess?: () => void;
 }
@@ -78,7 +142,48 @@ const idTypeOptions = [
   { label: "Tax ID", value: "Tax ID" },
 ];
 
-const initialForm = {
+type ContractorFormState = {
+  companyName: string;
+  contactName: string;
+  email: string;
+  password: string;
+  contractPreview: string;
+  coiPreview: string;
+  zipCode: string;
+  state: string;
+  city: string;
+  parkingLocation: string;
+  usdot: string;
+  txdot: string;
+  ownerOperatorOrFleet: string;
+  payPercent: string;
+  truckOwnership: string;
+  truckCount: string;
+  truck_unitNumber: string;
+  truck_truckName: string;
+  truck_year: string;
+  truck_vinNumber: string;
+  truck_plateNumber: string;
+  truck_truckType: string;
+  truck_insuranceExpiry: string;
+  truck_alias: string;
+  signatureDate: string;
+  expirationDate: string;
+  address: string;
+  contractFileName: string;
+  coiFileName: string;
+  idType: string;
+  id: string;
+  countryCode: string;
+  phone: string;
+  autoSendRenewalReminders: boolean;
+  contractFile: File | null;
+  coiFile: File | null;
+  dotInspectionFile: File | null;
+  dotInspectionPreview: string;
+};
+
+const initialForm: ContractorFormState = {
   companyName: "",
   contactName: "",
   email: "",
@@ -94,10 +199,9 @@ const initialForm = {
   txdot: "",
   ownerOperatorOrFleet: "",
   payPercent: "",
-  truckOwnership: "", // 'single' or 'multiple'
+  truckOwnership: "",
   truckCount: "",
 
-  // single truck details
   truck_unitNumber: "",
   truck_truckName: "",
   truck_year: "",
@@ -114,13 +218,84 @@ const initialForm = {
   coiFileName: "",
   idType: "",
   id: "",
-  phoneCode: "+1",
+  countryCode: "+1",
   phone: "",
   autoSendRenewalReminders: true,
-  contractFile: null as File | null,
-  coiFile: null as File | null,
-  dotInspectionFile: null as File | null,
+  contractFile: null,
+  coiFile: null,
+  dotInspectionFile: null,
   dotInspectionPreview: "",
+};
+
+const getEditFormState = (
+  editData: ContractorEditData | null | undefined,
+): ContractorFormState => {
+  if (!editData) return initialForm;
+
+  const singleTruck =
+    editData.ownerTruck ??
+    (Array.isArray(editData.trucks) && editData.trucks.length > 0
+      ? editData.trucks[0]
+      : (editData.truck ?? null));
+
+  const ownerDriver = editData.ownerDriver ?? null;
+
+  return {
+    ...initialForm,
+    companyName: editData.companyName ?? "",
+    email: editData.email ?? ownerDriver?.email ?? "",
+    password: "",
+    zipCode: editData.zipCode ?? "",
+    state: editData.state ?? "",
+    city: editData.city ?? "",
+    parkingLocation: editData.parkingLocation ?? "",
+    signatureDate: editData.signatureDate
+      ? editData.signatureDate.slice(0, 10)
+      : "",
+    expirationDate: editData.expirationDate
+      ? editData.expirationDate.slice(0, 10)
+      : "",
+    address: editData.address ?? "",
+    idType: normalizeIdType(editData.idType),
+    id: editData.idNumber ?? "",
+    phone: ownerDriver?.phone ?? editData.phone ?? "",
+    contactName: ownerDriver?.name ?? editData.contactName ?? "",
+    autoSendRenewalReminders: editData.autoSendRenewalReminders ?? true,
+    usdot: editData.usdotNumber ?? "",
+    txdot: editData.txdotNumber ?? "",
+    ownerOperatorOrFleet: editData.ownerOperatorOrFleet ?? "",
+    payPercent:
+      editData.payPercent !== undefined && editData.payPercent !== null
+        ? String(editData.payPercent)
+        : "",
+    contractFileName: editData.contractDocument?.url ?? "",
+    coiFileName: editData.coiDocument?.url ?? "",
+    contractPreview: editData.contractDocument?.url ?? "",
+    coiPreview: editData.coiDocument?.url ?? "",
+    dotInspectionPreview:
+      singleTruck?.dotInspectionDocument?.url ??
+      editData.ownerTruck?.dotInspectionDocument?.url ??
+      editData.dotInspectionDocument?.url ??
+      editData.dotInspection?.url ??
+      "",
+    truckOwnership: Number(editData.truckCount) > 1 ? "multiple" : "single",
+    truckCount: editData.truckCount ? String(editData.truckCount) : "",
+    countryCode: editData.countryCode ?? "+1",
+    truck_unitNumber: singleTruck?.unitNumber ?? "",
+    truck_truckName: singleTruck?.truckName ?? "",
+    truck_year: singleTruck?.year ? String(singleTruck.year) : "",
+    truck_vinNumber: singleTruck?.vinNumber ?? "",
+    truck_plateNumber: singleTruck?.plateNumber ?? "",
+    truck_truckType: singleTruck?.truckType ?? "",
+    truck_insuranceExpiry: singleTruck?.insuranceExpiry
+      ? String(singleTruck.insuranceExpiry).slice(0, 10)
+      : "",
+    truck_alias: singleTruck?.alias
+      ? Array.isArray(singleTruck.alias)
+        ? singleTruck.alias.join(",")
+        : String(singleTruck.alias)
+      : "",
+  };
 };
 
 const ContractorModal = ({
@@ -130,8 +305,36 @@ const ContractorModal = ({
   editData,
   onSuccess,
 }: ContractorModalProps) => {
-  const [form, setForm] = useState(initialForm);
-  const [cityOptionsState, setCityOptionsState] = useState(cityOptions);
+  const [form, setForm] = useState<ContractorFormState>(() =>
+    isEdit && editData ? getEditFormState(editData) : initialForm,
+  );
+const [cityOptionsState, setCityOptionsState] = useState(() =>
+  editData?.city
+    ? cityOptions.some((option) => option.value === editData.city)
+      ? cityOptions
+      : [
+          ...cityOptions,
+          {
+            label: editData.city,
+            value: editData.city,
+          },
+        ]
+    : cityOptions
+);
+
+const [stateOptionsState, setStateOptionsState] = useState(() =>
+  editData?.state
+    ? stateOptions.some((option) => option.value === editData.state)
+      ? stateOptions
+      : [
+          ...stateOptions,
+          {
+            label: editData.state,
+            value: editData.state,
+          },
+        ]
+    : stateOptions
+);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -161,7 +364,7 @@ const ContractorModal = ({
       return;
     }
 
-    const rawPayload: any = {
+    const rawPayload: Record<string, string | boolean | undefined> = {
       companyName: form.companyName.trim(),
       contactName: form.contactName.trim(),
       phone: form.phone,
@@ -183,7 +386,7 @@ const ContractorModal = ({
       payPercent: form.payPercent.replace("%", ""),
       truckOwnership: form.truckOwnership,
       truckCount: form.truckOwnership === "single" ? "1" : form.truckCount,
-      phoneCode: form.phoneCode,
+      countryCode: form.countryCode,
     };
 
     const formData = new FormData();
@@ -196,7 +399,7 @@ const ContractorModal = ({
 
     // If single truck, include truck JSON payload
     if (form.truckOwnership === "single") {
-      const truckObj: any = {
+      const truckObj: Record<string, string | string[] | undefined> = {
         unitNumber: form.truck_unitNumber || "",
         truckName: form.truck_truckName || "",
         year: form.truck_year || "",
@@ -234,7 +437,14 @@ const ContractorModal = ({
     setLoading(true);
     try {
       if (isEdit && editData) {
-        await uploadContractorFilesApi(editData._id, formData);
+        const contractorId = editData._id ?? editData.id;
+
+        if (!contractorId) {
+          setError("Contractor id is missing.");
+          return;
+        }
+
+        await uploadContractorFilesApi(contractorId, formData);
       } else {
         await createContractorApi(formData);
       }
@@ -242,18 +452,18 @@ const ContractorModal = ({
       onSuccess?.();
       handleClose();
     } catch (err) {
-  if (axios.isAxiosError(err)) {
-    const data = err.response?.data;
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data;
 
-    setError(
-      data?.error?.message ||
-      data?.message ||
-      "Something went wrong. Please try again."
-    );
-  } else {
-    setError("Something went wrong. Please try again.");
-  }
-} finally {
+        setError(
+          data?.error?.message ||
+            data?.message ||
+            "Something went wrong. Please try again.",
+        );
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -264,90 +474,6 @@ const ContractorModal = ({
     "image/png",
     "image/jpg",
   ];
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (isEdit && editData) {
-      // populate truck fields if single
-      const singleTruck =
-        // prefer ownerTruck if API returned it
-        editData.ownerTruck ??
-        (Array.isArray(editData.trucks) && editData.trucks.length > 0
-          ? editData.trucks[0]
-          : editData.truck || null);
-
-      // prefer ownerDriver for driver/contact info if provided
-      const ownerDriver = editData.ownerDriver ?? null;
-
-      setForm({
-        ...initialForm,
-        companyName: editData.companyName ?? "",
-        email: editData.email ?? (ownerDriver?.email ?? ""),
-        password: "",
-        zipCode: editData.zipCode ?? "",
-        state: editData.state ?? "",
-        city: editData.city ?? "",
-        parkingLocation: editData.parkingLocation ?? "",
-        // signatureDate/expirationDate ISO datetime string me aate hain ("2026-07-01T00:00:00.000Z"),
-        // date input ko sirf "YYYY-MM-DD" chahiye
-        signatureDate: editData.signatureDate
-          ? editData.signatureDate.slice(0, 10)
-          : "",
-        expirationDate: editData.expirationDate
-          ? editData.expirationDate.slice(0, 10)
-          : "",
-        address: editData.address ?? "",
-        idType: normalizeIdType(editData.idType),
-        id: editData.idNumber ?? "",
-        phone: ownerDriver?.phone ?? editData.phone ?? "",
-        contactName: ownerDriver?.name ?? editData.contactName ?? "",
-        autoSendRenewalReminders: editData.autoSendRenewalReminders ?? true,
-        usdot: editData.usdotNumber ?? "",
-        txdot: editData.txdotNumber ?? "",
-        ownerOperatorOrFleet: editData.ownerOperatorOrFleet ?? "",
-        payPercent:
-          editData.payPercent !== undefined && editData.payPercent !== null
-            ? String(editData.payPercent)
-            : "",
-        contractFileName: editData.contractDocument?.url ?? "",
-        coiFileName: editData.coiDocument?.url ?? "",
-
-        contractPreview: editData.contractDocument?.url ?? "",
-        coiPreview: editData.coiDocument?.url ?? "",
-        dotInspectionPreview:
-          singleTruck?.dotInspectionDocument?.url ??
-          editData.ownerTruck?.dotInspectionDocument?.url ??
-          editData.dotInspectionDocument?.url ??
-          editData.dotInspection?.url ??
-          "",
-        truckOwnership: Number(editData.truckCount) > 1 ? "multiple" : "single",
-
-        truckCount: editData.truckCount ? String(editData.truckCount) : "",
-        phoneCode: editData.phoneCode ?? "+1",
-
-        // single truck details
-        truck_unitNumber: singleTruck?.unitNumber ?? "",
-        truck_truckName: singleTruck?.truckName ?? "",
-        truck_year: singleTruck?.year ? String(singleTruck.year) : "",
-        truck_vinNumber: singleTruck?.vinNumber ?? "",
-        truck_plateNumber: singleTruck?.plateNumber ?? "",
-        truck_truckType: singleTruck?.truckType ?? "",
-        truck_insuranceExpiry: singleTruck?.insuranceExpiry
-          ? String(singleTruck.insuranceExpiry).slice(0, 10)
-          : "",
-        truck_alias: singleTruck?.alias
-          ? Array.isArray(singleTruck.alias)
-            ? singleTruck.alias.join(",")
-            : String(singleTruck.alias)
-          : "",
-        // dot inspection not stored locally — show empty
-      });
-    } else {
-      setForm(initialForm);
-    }
-    setError("");
-  }, [open, isEdit, editData]);
 
   const isFormValid = Boolean(
     form.companyName.trim() &&
@@ -369,7 +495,7 @@ const ContractorModal = ({
     (form.truckOwnership === "single" ? true : form.truckCount.trim()) &&
     (form.contractFile !== null || form.contractPreview.trim()) &&
     (form.coiFile !== null || form.coiPreview.trim()) &&
-    form.phoneCode.trim() &&
+    form.countryCode.trim() &&
     form.phone.trim(),
   );
 
@@ -418,6 +544,8 @@ const ContractorModal = ({
                   setForm((prev) => ({ ...prev, email: value }))
                 }
                 placeholder="Enter email..."
+                name={isEdit ? "email" : "contractor-new-email"}
+                autoComplete={isEdit ? "email" : "new-password"}
               />
 
               <CommonTextInput
@@ -426,11 +554,19 @@ const ContractorModal = ({
                 onChange={(value) =>
                   setForm((prev) => ({ ...prev, password: value }))
                 }
-                placeholder={isEdit ? "Password cannot be changed here" : "Enter password (optional for edit)"}
+                placeholder={
+                  isEdit
+                    ? "Password cannot be changed here"
+                    : "Enter password (optional for edit)"
+                }
                 type={showPassword ? "text" : "password"}
-                rightIcon={showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                rightIcon={
+                  showPassword ? <EyeOff size={16} /> : <Eye size={16} />
+                }
                 onRightIconClick={() => setShowPassword((s) => !s)}
                 disabled={isEdit}
+                name={isEdit ? "password" : "contractor-new-password"}
+                autoComplete="new-password"
               />
 
               {/* Name */}
@@ -448,10 +584,10 @@ const ContractorModal = ({
                 />
               </div>
 
-              {/* State + City */}
               <CommonSelectInput
                 label="State"
                 value={form.state}
+                options={stateOptionsState}
                 onChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
@@ -459,7 +595,20 @@ const ContractorModal = ({
                   }))
                 }
                 placeholder="Select one..."
-                options={stateOptions}
+                addNewLabel="+ Add New State"
+                onAddNew={(stateName) => {
+                  const newState = {
+                    label: stateName,
+                    value: stateName,
+                  };
+
+                  setStateOptionsState((prev) => [...prev, newState]);
+
+                  setForm((prev) => ({
+                    ...prev,
+                    state: stateName,
+                  }));
+                }}
               />
 
               <CommonSelectInput
@@ -637,13 +786,11 @@ const ContractorModal = ({
 
               {/* Address */}
               <div className="md:col-span-2">
-                <label className="block text-sm mb-2">
-                  Address
-                </label>
+                <label className="block text-sm mb-2">Address</label>
                 <textarea
                   placeholder="Add Full Address"
                   value={form.address}
-                  onChange={(e: any) =>
+                  onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
                       address: e.target.value,
@@ -693,12 +840,12 @@ const ContractorModal = ({
               />
               <CommonPhoneInput
                 label="Company Telephone"
-                countryCode={form.phoneCode}
+                countryCode={form.countryCode}
                 phone={form.phone}
                 onCountryChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
-                    phoneCode: value,
+                    countryCode: value,
                   }))
                 }
                 onPhoneChange={(value) =>
@@ -862,7 +1009,9 @@ const ContractorModal = ({
 
                     {form.dotInspectionPreview && (
                       <div className="mt-2">
-                        {form.dotInspectionPreview.toLowerCase().endsWith(".pdf") ? (
+                        {form.dotInspectionPreview
+                          .toLowerCase()
+                          .endsWith(".pdf") ? (
                           <iframe
                             src={form.dotInspectionPreview}
                             className="w-full h-25 rounded border"

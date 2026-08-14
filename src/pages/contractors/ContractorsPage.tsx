@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar1, Funnel, Plus, RefreshCcw } from "lucide-react";
 import axios from "axios";
 import PageHeader from "../../components/common/PageHeader";
@@ -26,11 +26,11 @@ import {
 } from "../../services/auth.service";
 import type { Contractor, ContractorPagination } from "../../types/auth.types";
 
-export const columns = [
-  { label: "Driver Name", key: "driverName" },
+const columns = [
+  // { label: "Driver Name", key: "driverName" },
   { label: "Contractor", key: "contractor" },
   { label: "Parking Location", key: "parkingLocation" },
-  { label: "Unit Number", key: "unitNumber" },
+  // { label: "Unit Number", key: "unitNumber" },
   { label: "Phone", key: "phone" },
   { label: "Email", key: "email" },
   { label: "Status", key: "status" },
@@ -81,27 +81,30 @@ const [filter, setFilter] = useState("all");
     "You have successfully loaded the contractors.",
   );
 
-  const fetchContractors = async (
-    page = pagination.page,
-    limit = pagination.limit,
-  ) => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await getContractorsApi(page, limit);
-      setContractors(res.data);
-      setPagination(res.pagination);
-    } catch {
-      setError("Unable to load contractors. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchContractors = useCallback(
+    async (page = pagination.page, limit = pagination.limit) => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await getContractorsApi(page, limit);
+        setContractors(res.data);
+        setPagination(res.pagination);
+      } catch {
+        setError("Unable to load contractors. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pagination.page, pagination.limit],
+  );
 
   useEffect(() => {
-    fetchContractors(1, pagination.limit);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const timeoutId = window.setTimeout(() => {
+      void fetchContractors(1, 10);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchContractors]);
 
   const handleUpdate = () => {
     setSuccessTitle("You have successfully loaded the contractors.");
@@ -227,7 +230,6 @@ if (filter !== "all") {
     }
   };
 
-  // Static hai kyunki abhi koi stats API nahi di gayi hai
   const statsData = [
     {
       title: "Total Contractors",
@@ -314,7 +316,7 @@ if (filter !== "all") {
               />
               <button
                 onClick={() => setOpenCalendarModal(true)}
-                className="bg-white border border-(--border-gray-2) rounded-[5px] h-[36px] px-2 xl:px-4 py-1 xl:py-2 flex items-center gap-3 cursor-pointer w-fit"
+                className="bg-white border border-(--border-gray-2) rounded-[5px] h-9 px-2 xl:px-4 py-1 xl:py-2 flex items-center gap-3 cursor-pointer w-fit"
               >
                 <Calendar1 size={16} />
                 <span className="text-sm font-normal">{formatDateRange()}</span>
@@ -352,9 +354,16 @@ if (filter !== "all") {
                 }}
                 onEdit={async (item) => {
                   // fetch full contractor detail from API to ensure ownerDriver/ownerTruck are present
+                  const contractorId = (item as ContractorRow).id || (item as ContractorRow)._id;
+
+                  if (!contractorId) {
+                    setError("Unable to load contractor details.");
+                    return;
+                  }
+
                   try {
                     setLoading(true);
-                    const res = await getContractorByIdApi((item as any).id || (item as any)._id);
+                    const res = await getContractorByIdApi(contractorId);
                     setSelectedContractor(res.data);
                     setEditContractorModalOpen(true);
                   } catch (err) {
@@ -384,12 +393,14 @@ if (filter !== "all") {
       />
 
       <ContractorModal
+        key={openCreateContractorModal ? "create-contractor" : "create-contractor-closed"}
         open={openCreateContractorModal}
         onClose={() => setOpenCreateContractorModal(false)}
         onSuccess={handleCreateSuccess}
       />
 
       <ContractorModal
+        key={editContractorModalOpen ? `edit-contractor-${selectedContractor?._id ?? "new"}` : "edit-contractor-closed"}
         open={editContractorModalOpen}
         onClose={() => {
           setEditContractorModalOpen(false);

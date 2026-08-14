@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import axios from "axios";
@@ -86,14 +85,34 @@ const jobStatusDot = (status: string) => {
   return "orange";
 };
 
-const dummyPastJobs = [
+type PastJobCard = {
+  id: string;
+  date: string;
+  customer: string;
+  route: string;
+  material: string;
+  weight: string;
+  truckId: string;
+  jobCode: string;
+  contractorRate: string | number;
+  invoiceRate: string | number;
+  status: string;
+  dotColor: string;
+};
+
+const dummyPastJobs: PastJobCard[] = [
   {
-    id: 1,
+    id: "1",
     date: "15 May 2026",
+    customer: "Dummy Customer",
     route: "Chicago-San Fransico",
     material: "Sand",
     weight: "50tonnes",
     truckId: "121324",
+    jobCode: "JOB-001",
+    contractorRate: "-",
+    invoiceRate: "-",
+    status: "pending",
     dotColor: "orange",
   },
 ];
@@ -151,15 +170,12 @@ useEffect(() => {
     }
   };
 
-  const fetchContractor = async () => {
+  const fetchContractor = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError("");
     try {
       const res = await getContractorByIdApi(id);
-      console.log(res.data);
-      console.log(res.data.recentJobs);
-      console.log(res.data.recentJobs[0]);
       setContractor(res.data);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -170,43 +186,45 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
-    fetchContractor();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    if (!id) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void fetchContractor();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [id, fetchContractor]);
 
   // Real jobs ho to unhi se cards banao — pickup/deliver/material is response me null hain,
   // isliye wahan "-" dikhta hai (dummy data nahi ghadha)
-  const pastJobs = contractor
-    ? contractor.recentJobs.map((job) => ({
-        id: job._id,
-        date: dayjs(job.date).format("DD MMM YYYY"),
+  const pastJobs: PastJobCard[] = contractor
+    ? contractor.recentJobs.map((job) => {
+        const jobCode =
+          typeof job.jobId === "object"
+            ? job.jobId?.code ?? "-"
+            : job.jobId ?? "-";
 
-        customer: job.customerId?.name ?? "-",
-
-        route: `${job.pickupSiteId?.name ?? "-"} → ${job.deliverySiteId?.name ?? "-"}`,
-
-        material: job.materialId?.name ?? "-",
-
-        weight: `${job.weightPerTrip ?? 0} tons`,
-
-        truckId:
-          typeof job.truckId === "object"
-            ? (job.truckId?.unitNumber ?? "-")
-            : (job.truckId ?? "-"),
-
-        jobCode: job.jobId?.code ?? "-",
-
-        contractorRate: job.contractorRate ?? "-",
-
-        invoiceRate: job.invoiceRate ?? "-",
-
-        status: job.status ?? "-",
-
-        dotColor: jobStatusDot(job.status),
-      }))
+        return {
+          id: job._id,
+          date: dayjs(job.date).format("DD MMM YYYY"),
+          customer: job.customerId?.name ?? "-",
+          route: `${job.pickupSiteId?.name ?? "-"} → ${job.deliverySiteId?.name ?? "-"}`,
+          material: job.materialId?.name ?? "-",
+          weight: `${job.weightPerTrip ?? 0} tons`,
+          truckId:
+            typeof job.truckId === "object"
+              ? (job.truckId?.unitNumber ?? "-")
+              : (job.truckId ?? "-"),
+          jobCode,
+          contractorRate: job.contractorRate ?? "-",
+          invoiceRate: job.invoiceRate ?? "-",
+          status: job.status ?? "-",
+          dotColor: jobStatusDot(job.status),
+        };
+      })
     : dummyPastJobs;
 
   const filteredPastJobs = pastJobs.filter((job) => {
@@ -676,6 +694,7 @@ const txdot = contractor?.txdotNumber || "-";
         onSuccess={fetchContractor}
       />
       <ContractorModal
+        key={openEditContractorModal ? `edit-contractor-detail-${contractor?._id ?? "new"}` : "edit-contractor-detail-closed"}
         open={openEditContractorModal}
         onClose={() => setOpenEditContractorModal(false)}
         isEdit

@@ -5,8 +5,9 @@ import dayjs from "dayjs";
 import { generateStatementsApi, downloadCombinedStatementsXlsx, getContractorByIdApi } from "../../services/auth.service";
 import type { GeneratedStatementEntry } from "../../types/auth.types";
 
-const SettlementStatementTab = () => {
-  const { id: contractorId } = useParams();
+const SettlementStatementTab = ({ contractorId: propContractorId }: { contractorId?: string }) => {
+  const { id: routeContractorId } = useParams();
+  const contractorId = propContractorId ?? routeContractorId;
   const [isGenerated, setIsGenerated] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
